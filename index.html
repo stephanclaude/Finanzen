@@ -112,6 +112,13 @@ a.card:hover { border-color: var(--accent); }
 .mon-add { display: grid; grid-template-columns: minmax(0, 1fr) 7em; gap: 6px; }
 .mon-add input, .mon-add select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 9px; min-width: 0; }
 .mon-add select { grid-column: 1 / -1; }
+.kurs-add { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.kurs-add label { display: grid; gap: 2px; }
+.kurs-add small { font-size: 11px; color: var(--muted); }
+.kurs-add input { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 9px; min-width: 0; }
+.kurs-add input[inputmode=decimal] { font-family: var(--font-num); }
+.kurs-add .btn { grid-column: 1 / -1; justify-content: center; }
+.inline-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .chart .note { position: absolute; inset: auto 0 6px 0; text-align: center; font-size: 12px; color: var(--muted); }
 .tip { position: absolute; top: 0; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgb(0 0 0 / .12); white-space: nowrap; }
 .tip b { display: block; font-family: var(--font-num); font-size: 13px; font-weight: 500; }
@@ -254,8 +261,17 @@ const ymDiff = (a, b) => { const [ya, ma] = a.split('-').map(Number), [yb, mb] =
 const fYm = (ym, lang) => new Date(ym + '-15T12:00:00').toLocaleDateString('de-AT', lang ? { month: 'long', year: 'numeric' } : { month: 'short', year: '2-digit' });
 const fEin = v => v == null || v === '' ? '' : Number.isInteger(v) ? String(v) : v.toFixed(2).replace('.', ',');
 const tageBis = d => Math.round((new Date(d + 'T12:00:00') - new Date(heute() + 'T12:00:00')) / 864e5);
-// akzeptiert 1234,5 · 1.234,50 · 1234.5
-const zahl = v => { if (v === '' || v == null) return null; let t = String(v).replace(/[\s€]/g, ''); if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); const n = Number(t); return t !== '' && isFinite(n) ? n : null; };
+// akzeptiert 1234,5 · 1.234,50 · 10.000 · 1234.5
+const zahl = v => { if (v === '' || v == null) return null; let t = String(v).replace(/[\s€]/g, ''); if (t.includes(',') || /^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '').replace(',', '.'); const n = Number(t); return t !== '' && isFinite(n) ? n : null; };
+const letzter = (map, d = heute()) => { let bk = null; for (const k of Object.keys(map || {})) if (k <= d && (!bk || k > bk)) bk = k; return bk ? { d: bk, v: map[bk] } : null; };
+const gv = (wert, einsatz) => einsatz ? `${wert >= einsatz ? '+' : '−'}${fEur0(Math.abs(wert - einsatz))} (${wert >= einsatz ? '+' : '−'}${Math.abs((wert / einsatz - 1) * 100).toLocaleString('de-AT', { maximumFractionDigits: 1 })} %)` : '';
+// Restschuld eines Kredits am Stichtag: letzter Stand laut Bank, dann Monat für Monat Zinsen dazu und Rate ab
+function restschuld(p, d) {
+  const l = letzter(p.werte, d); if (!l) return 0;
+  let r = l.v; const z = (p.zinssatz || 0) / 1200, rate = p.rate || 0;
+  for (let i = 0, n = ymDiff(l.d.slice(0, 7), d.slice(0, 7)); i < n && r > 0; i++) r = Math.max(0, r * (1 + z) - rate);
+  return r;
+}
 const personName = id => S.personen.find(p => p.id === id)?.name || '';
 const diff = (v, alt, fmt = fEur) => {
   if (alt == null) return '';
@@ -294,6 +310,61 @@ const VORLAGEN = {
                sub: p.sparrate ? fEur(p.sparrate) + '/Monat' : '' };
     },
     hinweise(p) { const ks = Object.keys(p.werte || {}).sort(); const letzt = ks.at(-1); if (!letzt) return ['noch kein Stand eingetragen']; const t = -tageBis(letzt); return t > 120 ? [`seit ${Math.round(t / 30)} Monaten nicht aktualisiert`] : []; },
+  },
+  kurs: {
+    bereich: 'vermoegen', name: 'Kurs × Stück',
+    info: 'ETFs, Aktien, Münzen … Stückzahl, Einstand und Kurs. Die App rechnet Wert und Gewinn/Verlust; ein Link führt zur Seite mit dem aktuellen Kurs.',
+    posWort: 'Position', posMehr: 'Positionen', kursPflege: true,
+    felder: [
+      { k: 'name', l: 'Bezeichnung', t: 'text', pflicht: true, ph: 'z. B. Vanguard FTSE All-World, Wiener Philharmoniker 1 oz Gold' },
+      { k: 'kennung', l: 'ISIN / Kennung (gleiche Kennung = gleicher Kurs)', t: 'text', halb: true },
+      { k: 'anbieter', l: 'Depot / Händler', t: 'text', halb: true },
+      { k: 'person', l: 'Gehört', t: 'person' },
+      { k: 'link', l: 'Link zum Kurs (z. B. justETF, philoro, Münze Österreich)', t: 'url' },
+      { k: 'staende', l: 'Bestand und Kurs', t: 'kursstand' },
+      { k: 'notiz', l: 'Notiz', t: 'notiz' },
+    ],
+    stand: (p, d) => letzter(p.staende, d)?.v || null,
+    wert(p, d) { const x = this.stand(p, d); return x ? (x.menge || 0) * (x.kurs || 0) : 0; },
+    einsatz(p, d = heute()) { return this.stand(p, d)?.einsatz || 0; },
+    daten: p => Object.keys(p.staende || {}),
+    zeile(p) {
+      const l = letzter(p.staende); if (!l) return { meta: [p.anbieter, personName(p.person), 'noch kein Bestand'].filter(Boolean).join(' · '), sub: '' };
+      const w = l.v.menge * l.v.kurs;
+      return { meta: [p.anbieter, personName(p.person), `${l.v.menge.toLocaleString('de-AT')} Stk × ${fEur(l.v.kurs)} (${fDatum(l.d)})`].filter(Boolean).join(' · '),
+               sub: l.v.einsatz ? gv(w, l.v.einsatz) : '', subKl: l.v.einsatz ? (w >= l.v.einsatz ? 'gain' : 'loss') : '' };
+    },
+    kopf(b) { const ps = positionen(b); const w = ps.reduce((s, p) => s + this.wert(p, heute()), 0), e = ps.reduce((s, p) => s + this.einsatz(p), 0);
+      return e ? `<span>Einsatz <b>${fEur0(e)}</b></span><span class="${w >= e ? 'gain' : 'loss'}">${gv(w, e)}</span>` : ''; },
+    hinweise(p) { const l = letzter(p.staende); if (!l) return ['noch kein Bestand eingetragen']; const t = -tageBis(l.d); return t > 60 ? [`Kurs seit ${t} Tagen nicht aktualisiert`] : []; },
+  },
+  immobilie: {
+    bereich: 'vermoegen', name: 'Immobilie & Kredite',
+    info: 'Haus oder Wohnung mit geschätztem Wert, dazu die Kredite. Die Restschuld rechnet die App aus Zinssatz und Rate weiter und zieht sie vom Wert ab.',
+    posWort: 'Position', posMehr: 'Positionen', listTitel: 'Wert und Kredite',
+    felder: [
+      { k: 'art', l: 'Art', t: 'auswahl', optionen: { objekt: 'Wert der Immobilie', kredit: 'Kredit' } },
+      { k: 'name', l: 'Bezeichnung', t: 'text', pflicht: true, ph: 'z. B. Haus, Wohnkredit 1' },
+      { k: 'anbieter', l: 'Bank / Quelle der Schätzung', t: 'text' },
+      { k: 'person', l: 'Gehört', t: 'person' },
+      { k: 'zinssatz', l: 'Zinssatz % p.a.', t: 'eur', nur: 'kredit', halb: true },
+      { k: 'rate', l: 'Monatliche Rate', t: 'eur', nur: 'kredit', halb: true },
+      { k: 'werte', l: 'Wert (Schätzung) bzw. Restschuld laut Bank', t: 'verlauf' },
+      { k: 'notiz', l: 'Notiz', t: 'notiz' },
+    ],
+    wert(p, d) { return p.art === 'kredit' ? -restschuld(p, d) : letzter(p.werte, d)?.v || 0; },
+    daten: p => Object.keys(p.werte || {}),
+    zeile(p) {
+      const l = letzter(p.werte);
+      if (p.art !== 'kredit') return { meta: [p.anbieter, personName(p.person), l ? 'Schätzung vom ' + fDatum(l.d) : 'noch kein Wert'].filter(Boolean).join(' · '), sub: '' };
+      let r = restschuld(p, heute()), m = 0; const z = (p.zinssatz || 0) / 1200;
+      while (r > 0 && m < 600 && p.rate > r * z) { r = r * (1 + z) - p.rate; m++; }
+      return { meta: [p.anbieter, p.zinssatz != null ? `${p.zinssatz.toLocaleString('de-AT')} %` : '', p.rate ? `Rate ${fEur(p.rate)}` : '', l ? `Bankstand ${fDatum(l.d)}` : 'noch kein Stand'].filter(Boolean).join(' · '),
+               sub: m && m < 600 ? 'abbezahlt ca. ' + fYm(ymPlus(ymHeute(), m)) : '', valKl: 'loss' };
+    },
+    kopf(b) { const ps = positionen(b); const w = ps.filter(p => p.art !== 'kredit').reduce((s, p) => s + this.wert(p, heute()), 0), k = ps.filter(p => p.art === 'kredit').reduce((s, p) => s + restschuld(p, heute()), 0);
+      return `<span>Wert <b>${fEur0(w)}</b></span><span>Kredite <b class="loss">−${fEur0(k)}</b></span>`; },
+    hinweise(p) { if (p.art !== 'kredit') return []; const l = letzter(p.werte); if (!l) return ['noch keine Restschuld eingetragen']; return -tageBis(l.d) > 365 ? ['Restschuld seit über einem Jahr nicht mit der Bank abgeglichen'] : []; },
   },
   kosten: {
     bereich: 'kosten', name: 'Kostenliste',
@@ -336,6 +407,9 @@ const VORLAGEN = {
     hinweise(p) { if (!p.frist || (p.ende && p.ende <= heute())) return []; const t = tageBis(p.frist); return t >= 0 && t <= 45 ? [`Kündigungs-/Verlängerungstermin in ${t} Tagen (${fDatum(p.frist)})`] : []; },
   },
 };
+
+// Stephans Vermögensbausteine (12.10.2026); Sammelkarten kommen als eigener Baustein dazu
+const STARTVERMOEGEN = [['stand', 'Sparkonto'], ['kurs', 'ETF-/Wertpapierdepot'], ['stand', 'Altersvorsorge'], ['kurs', 'Edelmetalle'], ['stand', 'Investitionen am/im Haus'], ['immobilie', 'Eigentumshaus']];
 
 /* ───────────── Berechnung: alles hängt an „Wert einer Position am Stichtag“ ───────────── */
 let personFilter = pref.get('person', '');
@@ -510,7 +584,7 @@ function viewBereich(ber) {
   <section class="card">${kopf}</section>
   <section class="list">
     <div class="list-head"><h2>Bausteine</h2><button class="btn small primary" data-act="neuBaustein" data-bereich="${ber}">+ Baustein</button></div>
-    ${zeilen || `<div class="empty">${B.leer}</div>`}
+    ${zeilen || (m ? `<div class="empty">${B.leer}</div>` : `<div class="empty">${B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startVermoegen">Unsere Bausteine anlegen</button></div><small>Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus, Eigentumshaus</small></div>`)}
     ${m ? '' : `<a class="row" href="tcg/"><span class="name">Sammelkarten-Depot</span><span class="val muted">öffnen ›</span><span class="meta">läuft noch eigenständig, wird bald hier eingerechnet</span></a>`}
   </section>
   ${m && bs.length ? monatsListe(pl, avg) : ''}`;
@@ -530,18 +604,18 @@ function viewBaustein(id) {
   const ps = positionen(b); const w = bausteinWert(b);
   const zeilen = ps.map(p => ({ p, w: V.wert(p, heute()) })).sort((a, c) => c.w - a.w || a.p.name.localeCompare(c.p.name)).map(({ p, w: pw }) => {
     const z = V.zeile(p);
-    return `<button class="row" data-act="pos" data-id="${p.id}"><span class="name">${esc(p.name)}</span><span class="val">${fEur(pw)}${m ? '<span class="muted"> Ø/M</span>' : ''}</span>
-      <span class="meta">${esc(z.meta)}</span><span class="sub">${esc(z.sub)}</span></button>`;
+    return `<button class="row" data-act="pos" data-id="${p.id}"><span class="name">${esc(p.name)}</span><span class="val ${z.valKl || ''}">${fEur(pw)}${m ? '<span class="muted"> Ø/M</span>' : ''}</span>
+      <span class="meta">${esc(z.meta)}</span><span class="sub ${z.subKl || ''}">${esc(z.sub)}</span></button>`;
   }).join('');
   return filterzeile(!m) + `
   <section class="card">
     <div class="card-head"><div class="lab">${esc(b.name)} · ${V.name}</div><button class="btn small" data-act="bausteinBearbeiten">Bearbeiten</button></div>
     <div class="big">${fEur0(w)}${m ? '<small>Ø/Monat</small>' : ''}</div>
-    <div class="figs">${m ? `<span>nächste 12 Monate <b>${fEur0(w * 12)}</b></span>` : `<span>${diff(w, bausteinWert(b, vormonatsende()))}</span>`}</div>
+    <div class="figs">${m ? `<span>nächste 12 Monate <b>${fEur0(w * 12)}</b></span>` : `${V.kopf ? V.kopf.call(V, b) : ''}<span>${diff(w, bausteinWert(b, vormonatsende()))}</span>`}</div>
     ${m ? balkenHtml(plan([b]), true) : chartHtml(verlauf([b], d => bausteinWert(b, d)), 'e')}
   </section>
   <section class="list">
-    <div class="list-head"><h2>${V.posMehr}</h2><button class="btn small primary" data-act="pos" data-id="">+ ${V.posWort}</button></div>
+    <div class="list-head"><h2>${V.listTitel || V.posMehr}</h2><span class="inline-btns">${V.kursPflege && ps.length ? '<button class="btn small" data-act="kurse">Kurse aktualisieren</button>' : ''}<button class="btn small primary" data-act="pos" data-id="">+ ${V.posWort}</button></span></div>
     ${zeilen || `<div class="empty">Noch nichts erfasst.</div>`}
   </section>
   ${b.notiz ? `<p class="muted" style="font-size:13px;margin:10px 4px">${esc(b.notiz)}</p>` : ''}`;
@@ -592,10 +666,17 @@ function render() {
 const $dlg = document.getElementById('dlg');
 function feldHtml(f, p) {
   const v = p[f.k] ?? '';
-  const wrap = inner => `<label class="field"><span>${f.l}</span>${inner}</label>`;
+  const wrap = inner => `<label class="field"${f.nur ? ` data-nur="${f.nur}"` : ''}><span>${f.l}</span>${inner}</label>`;
   switch (f.t) {
     case 'text': return wrap(`<input name="${f.k}" value="${esc(v)}" ${f.pflicht ? 'required' : ''} placeholder="${esc(f.ph || '')}" autocomplete="off">`);
-    case 'eur': return wrap(`<input name="${f.k}" inputmode="decimal" value="${fEin(v)}" ${f.pflicht ? 'required' : ''} pattern="[0-9.,\s€\-]*" autocomplete="off">`);
+    case 'url': return wrap(`<input name="${f.k}" type="url" value="${esc(v)}" placeholder="https://…" autocomplete="off">`);
+    case 'kursstand': { const l = letzter(v)?.v || {};
+      return `<div class="field"><span>${f.l}</span><div class="hist">
+      <div class="kurs-add"><label><small>Datum</small><input type="date" data-k="d" value="${heute()}"></label><label><small>Stück</small><input inputmode="decimal" data-k="menge" value="${fEin(l.menge)}" autocomplete="off"></label>
+      <label><small>Einstand gesamt €</small><input inputmode="decimal" data-k="einsatz" value="${fEin(l.einsatz)}" autocomplete="off"></label><label><small>Kurs pro Stück €</small><input inputmode="decimal" data-k="kurs" autocomplete="off"></label>
+      <button type="button" class="btn small" data-act="kursAdd">Eintragen</button></div>
+      <div data-klist></div></div></div>`; }
+    case 'eur': return wrap(`<input name="${f.k}" inputmode="decimal" value="${fEin(v)}" ${f.pflicht ? 'required' : ''} autocomplete="off">`);
     case 'datum': return wrap(`<input name="${f.k}" type="date" value="${esc(v)}">`);
     case 'notiz': return wrap(`<textarea name="${f.k}">${esc(v)}</textarea>`);
     case 'auswahl': return wrap(`<select name="${f.k}">${Object.entries(f.optionen).map(([k, l]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`);
@@ -613,7 +694,7 @@ function histListe(werte) {
 function oeffnePosition(bid, pid) {
   const b = S.bausteine[bid], V = VORLAGEN[b.vorlage];
   const p = pid ? structuredClone(b.positionen[pid]) : { person: personFilter || '', intervall: 'monat', beginn: V.bereich === 'kosten' ? heute() : undefined };
-  let werte = { ...(p.werte || {}) }, abw = { ...(p.abweichungen || {}) };
+  let werte = { ...(p.werte || {}) }, abw = { ...(p.abweichungen || {}) }, staende = structuredClone(p.staende || {});
   let html = ''; const fs = V.felder;
   for (let i = 0; i < fs.length; i++) {
     if (fs[i].halb && fs[i + 1]?.halb) { html += `<div class="two">${feldHtml(fs[i], p)}${feldHtml(fs[i + 1], p)}</div>`; i++; }
@@ -630,6 +711,17 @@ function oeffnePosition(bid, pid) {
   const al = form.querySelector('[data-abwlist]');
   const zeigAbw = () => { if (al) al.innerHTML = Object.entries(abw).sort().map(([ym, v]) => `<div class="hist-row"><span>${fYm(ym, true)}</span><span class="num">${fEur(v)}</span><button type="button" class="x" data-act="abwWeg" data-ym="${ym}" aria-label="Abweichung löschen">✕</button></div>`).join('') || '<div class="muted" style="font-size:13px">keine</div>'; };
   zeigAbw();
+  const kl = form.querySelector('[data-klist]');
+  const zeigKurse = () => { if (kl) kl.innerHTML = Object.entries(staende).sort((a, c) => c[0].localeCompare(a[0])).map(([d, x]) => `<div class="hist-row"><span>${fDatum(d)}</span><span class="num">${x.menge.toLocaleString('de-AT')} × ${fEur(x.kurs)}</span><button type="button" class="x" data-act="kursWeg" data-d="${d}" aria-label="Eintrag löschen">✕</button></div>`).join('') || '<div class="muted" style="font-size:13px">Noch nichts eingetragen.</div>'; };
+  zeigKurse();
+  const nimmKurs = () => { const g = k => form.querySelector(`[data-k=${k}]`); if (!g('kurs')) return; const kurs = zahl(g('kurs').value), menge = zahl(g('menge').value);
+    if (kurs == null || menge == null || !g('d').value) return; staende[g('d').value] = { menge, kurs, einsatz: zahl(g('einsatz').value) || 0 }; g('kurs').value = ''; zeigKurse(); };
+  // Felder, die nur für eine Art gelten (z. B. Zinssatz nur beim Kredit)
+  const art = form.querySelector('select[name=art]');
+  const zeigArt = () => form.querySelectorAll('[data-nur]').forEach(el => { el.hidden = !art || art.value !== el.dataset.nur; });
+  if (art) { art.onchange = zeigArt; } zeigArt();
+  form.querySelectorAll('.two').forEach(t => { t.hidden = [...t.children].every(c => c.hidden); });
+  if (art) art.addEventListener('change', () => form.querySelectorAll('.two').forEach(t => { t.hidden = [...t.children].every(c => c.hidden); }));
   // offene Eingabe im Stand-Feld wird beim Speichern mitgenommen
   const nimmHist = () => { const d = form.querySelector('[data-h=d]'), v = form.querySelector('[data-h=v]'); if (d && v && zahl(v.value) != null && d.value) { werte[d.value] = zahl(v.value); v.value = ''; zeigWerte(); } };
   form.onclick = e => {
@@ -637,15 +729,19 @@ function oeffnePosition(bid, pid) {
     if (a === 'histAdd') nimmHist();
     if (a === 'histWeg') { delete werte[e.target.closest('[data-d]').dataset.d]; zeigWerte(); }
     if (a === 'abwWeg') { delete abw[e.target.closest('[data-ym]').dataset.ym]; zeigAbw(); }
+    if (a === 'kursAdd') nimmKurs();
+    if (a === 'kursWeg') { delete staende[e.target.closest('[data-d]').dataset.d]; zeigKurse(); }
     if (a === 'zu') $dlg.close();
     if (a === 'posWeg' && confirm(`„${p.name}“ löschen?`)) { $dlg.close(); aendern(() => { delete b.positionen[pid]; }); }
   };
   form.onsubmit = e => {
-    e.preventDefault(); nimmHist();
+    e.preventDefault(); nimmHist(); nimmKurs();
     const fd = new FormData(form); const neu = {};
     for (const f of V.felder) {
       if (f.t === 'verlauf') { neu[f.k] = werte; continue; }
       if (f.t === 'abw') { if (Object.keys(abw).length) neu[f.k] = abw; continue; }
+      if (f.t === 'kursstand') { neu[f.k] = staende; continue; }
+      if (f.nur && fd.get('art') !== f.nur) continue;
       const raw = fd.get(f.k); if (raw == null) continue;
       const val = f.t === 'eur' ? zahl(raw) : String(raw).trim();
       if (val !== '' && val != null) neu[f.k] = val;
@@ -654,6 +750,28 @@ function oeffnePosition(bid, pid) {
     const ziel = S.bausteine[fd.get('_baustein')] || b;
     aendern(() => { if (pid && ziel !== b) delete b.positionen[pid]; ziel.positionen = ziel.positionen || {}; ziel.positionen[pid || uid()] = { ...neu, erstellt: p.erstellt || heute() }; });
     if (ziel !== b) toast(`„${neu.name}“ nach ${ziel.name} verschoben`);
+  };
+  $dlg.showModal();
+}
+// Kurse pflegen: eine Zeile pro Kennung (gleicher ETF / gleiche Münze), Link zur Kursseite, neuer Kurs gilt ab heute
+function oeffneKurse(bid) {
+  const b = S.bausteine[bid]; const gruppen = {};
+  for (const p of positionen(b)) { const k = (p.kennung || p.name).trim().toLowerCase(); (gruppen[k] = gruppen[k] || []).push(p); }
+  const gs = Object.values(gruppen);
+  $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>Kurse aktualisieren</h2>
+    <p class="muted" style="margin:0;font-size:13px">Link antippen, Kurs nachsehen, hier eintragen. Leere Felder bleiben unverändert. Stückzahl und Einstand bleiben gleich.</p>
+    ${gs.map((g, i) => { const l = letzter(g[0].staende); const link = g.find(p => p.link)?.link;
+      return `<div class="mon-row"><span class="t">${esc(g[0].name)}${g.length > 1 ? ` <small>${g.length} Positionen</small>` : ''}<small>${l ? 'zuletzt ' + fEur(l.v.kurs) + ' am ' + fDatum(l.d) : 'noch kein Kurs'}</small></span>
+        <input inputmode="decimal" data-g="${i}" placeholder="neuer Kurs" aria-label="Neuer Kurs ${esc(g[0].name)}" autocomplete="off">
+        ${link && /^https?:\/\//.test(link) ? `<a class="btn small" href="${esc(link)}" target="_blank" rel="noopener noreferrer" aria-label="Kurs nachsehen">↗</a>` : '<span></span>'}</div>`; }).join('') || '<p class="muted">Noch keine Positionen.</p>'}
+    <div class="sheet-foot"><button type="button" class="btn" data-act="zu">Abbrechen</button><button class="btn primary">Speichern</button></div></form>`;
+  const form = $dlg.firstChild;
+  form.onclick = e => { if (e.target.closest('[data-act=zu]')) $dlg.close(); };
+  form.onsubmit = e => {
+    e.preventDefault(); $dlg.close(); let n = 0;
+    aendern(() => gs.forEach((g, i) => { const kurs = zahl(form.querySelector(`[data-g="${i}"]`).value); if (kurs == null) return;
+      for (const x of g) { const p = b.positionen[x.id]; const l = letzter(p.staende)?.v; if (!l) continue; p.staende = p.staende || {}; p.staende[heute()] = { ...l, kurs }; n++; } }));
+    if (n) toast(`${n} Kurs${n === 1 ? '' : 'e'} aktualisiert`);
   };
   $dlg.showModal();
 }
@@ -765,23 +883,38 @@ function beispiel() {
   const reihe = (start, rate, n) => Object.fromEntries(Array.from({ length: n }, (_, i) => [d(n - 1 - i, 1), Math.round(start + rate * i + Math.sin(i) * rate * 0.6)]));
   const s = leer(); const ich = 'stephan', du = 'vicky', kids = 'kids';
   const add = (vorlage, name, ps) => { const id = uid(); s.bausteine[id] = { id, vorlage, name, notiz: '', reihe: Object.keys(s.bausteine).length, positionen: Object.fromEntries(ps.map(p => [uid(), p])) }; };
-  add('stand', 'ETF-Depot', [
-    { name: 'Vanguard FTSE All-World', anbieter: 'Flatex', person: ich, sparrate: 300, werte: reihe(14000, 420, 18) },
-    { name: 'iShares Core MSCI EM IMI', anbieter: 'Flatex', person: ich, sparrate: 50, werte: reihe(2100, 60, 18) },
+  const kurse = (start, steig, n, menge, einsatz) => Object.fromEntries(Array.from({ length: n }, (_, i) => [d(n - 1 - i, 1), { menge: menge(i), einsatz: einsatz(i), kurs: Math.round((start + steig * i + Math.sin(i * 1.3) * steig * 2) * 100) / 100 }]));
+  add('stand', 'Sparkonto', [
+    { name: 'Sparkonto', anbieter: 'Raiffeisen', werte: reihe(9000, 150, 18) },
   ]);
-  add('stand', 'Konten & Sparen', [
-    { name: 'Girokonto', anbieter: 'Erste Bank', werte: reihe(3200, 40, 18) },
-    { name: 'Notgroschen Tagesgeld', anbieter: 'Raiffeisen', werte: reihe(9000, 120, 18) },
+  add('kurs', 'ETF-/Wertpapierdepot', [
+    { name: 'Vanguard FTSE All-World', kennung: 'IE00BK5BQT80', anbieter: 'Flatex', person: ich, link: 'https://www.justetf.com/at/etf-profile.html?isin=IE00BK5BQT80', staende: kurse(108, 1.1, 18, i => 120 + i * 3, i => 12500 + i * 330) },
+    { name: 'iShares Core MSCI EM IMI', kennung: 'IE00BKM4GZ66', anbieter: 'Flatex', person: ich, link: 'https://www.justetf.com/at/etf-profile.html?isin=IE00BKM4GZ66', staende: kurse(30, 0.2, 18, i => 60 + i, i => 1750 + i * 32) },
+    { name: 'Vanguard FTSE All-World', kennung: 'IE00BK5BQT80', anbieter: 'Trade Republic', person: du, link: 'https://www.justetf.com/at/etf-profile.html?isin=IE00BK5BQT80', staende: kurse(108, 1.1, 18, i => 20 + i, i => 2100 + i * 110) },
   ]);
   add('stand', 'Altersvorsorge', [
-    { name: 'Prämienbegünstigte Zukunftsvorsorge', anbieter: 'Wiener Städtische', person: du, sparrate: 100, werte: { [d(14)]: 6200, [d(2)]: 7600 } },
+    { name: 'Lebensversicherung', anbieter: 'Wiener Städtische', person: ich, sparrate: 100, werte: { [d(14)]: 6200, [d(2)]: 7600 } },
     { name: 'Abfertigung neu', anbieter: 'VBV', person: ich, werte: { [d(13)]: 8900, [d(1)]: 10100 } },
+  ]);
+  add('kurs', 'Edelmetalle', [
+    { name: 'Wiener Philharmoniker 1 oz Gold', kennung: 'philharmoniker-gold-1oz', anbieter: 'philoro', link: 'https://philoro.at/', staende: kurse(2100, 45, 18, () => 3, () => 5400) },
+    { name: 'Wiener Philharmoniker 1 oz Silber', kennung: 'philharmoniker-silber-1oz', anbieter: 'Münze Österreich', link: 'https://www.muenzeoesterreich.at/', staende: kurse(28, 0.5, 18, () => 50, () => 1350) },
+  ]);
+  add('stand', 'Investitionen am/im Haus', [
+    { name: 'Photovoltaik-Anlage', werte: { [d(16, 5)]: 14500 } },
+    { name: 'Küche', werte: { [d(9, 20)]: 11800 } },
+  ]);
+  add('immobilie', 'Eigentumshaus', [
+    { art: 'objekt', name: 'Haus', anbieter: 'eigene Schätzung', werte: { [d(17)]: 420000, [d(5)]: 435000 } },
+    { art: 'kredit', name: 'Wohnkredit 1', anbieter: 'Bausparkasse', zinssatz: 2.9, rate: 890, werte: { [d(17)]: 198000 } },
+    { art: 'kredit', name: 'Wohnkredit 2', anbieter: 'Raiffeisen', zinssatz: 3.6, rate: 420, werte: { [d(17)]: 61000 } },
   ]);
   // Fälligkeit in einem bestimmten Kalendermonat, erste Zahlung im Vorjahr (wiederholt sich dann)
   const Y = new Date().getFullYear(), am = (m, t = 1, y = Y - 1) => `${y}-${String(m).padStart(2, '0')}-${String(t).padStart(2, '0')}`;
   const ymJetzt = new Date().toISOString().slice(0, 7), dez = `${Y}-12`;
   add('kosten', 'Kredite', [
-    { name: 'Wohnkredit', anbieter: 'Bausparkasse', betrag: 890, intervall: 'monat', beginn: am(3, 1, Y - 6), ende: am(2, 1, Y + 19) },
+    { name: 'Wohnkredit 2', anbieter: 'Raiffeisen', betrag: 420, intervall: 'monat', beginn: am(3, 1, Y - 6) },
+    { name: 'Wohnkredit 1', anbieter: 'Bausparkasse', betrag: 890, intervall: 'monat', beginn: am(3, 1, Y - 6), ende: am(2, 1, Y + 19) },
     { name: 'Autokredit Jahresrate', anbieter: 'Santander', betrag: 1500, intervall: 'jahr', beginn: am(12, 1), ende: am(12, 1, Y + 2) },
   ]);
   add('kosten', 'Haushalt', [
@@ -828,6 +961,8 @@ document.addEventListener('click', e => {
   if (a === 'bausteinBearbeiten') oeffneBaustein(VORLAGEN[S.bausteine[bid].vorlage].bereich, bid);
   if (a === 'pos') oeffnePosition(bid, el.dataset.id);
   if (a === 'monat') oeffneMonat(el.dataset.ym);
+  if (a === 'kurse') oeffneKurse(bid);
+  if (a === 'startVermoegen') aendern(() => { STARTVERMOEGEN.forEach(([vorlage, name], i) => { const id = uid(); S.bausteine[id] = { id, vorlage, name, notiz: '', positionen: {}, reihe: Object.keys(S.bausteine).length + i }; }); });
   if (a === 'personWeg' && confirm('Person entfernen? Ihre Positionen bleiben erhalten und zählen dann zu „Familie“.')) aendern(() => { S.personen = S.personen.filter(p => p.id !== el.dataset.id); for (const b of Object.values(S.bausteine)) for (const p of Object.values(b.positionen || {})) if (p.person === el.dataset.id) delete p.person; if (personFilter === el.dataset.id) personFilter = ''; });
   if (a === 'export') exportieren();
   if (a === 'demo' && confirm('Beispieldaten laden? Die Daten auf diesem Gerät werden ersetzt.')) { aendern(() => { S = beispiel(); }); location.hash = '#/'; }
