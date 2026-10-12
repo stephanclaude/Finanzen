@@ -198,7 +198,8 @@ dialog::backdrop { background: rgb(10 15 20 / .45); }
 'use strict';
 /* ───────────── Speicher: alles in IndexedDB auf diesem Gerät ───────────── */
 const DBNAME = 'finanzen';
-const leer = () => ({ version: 1, personen: [], bausteine: {} });
+// Feste IDs für die Familie, damit Backups von iPhone und PC zusammenpassen
+const leer = () => ({ version: 1, personen: [{ id: 'stephan', name: 'Stephan' }, { id: 'vicky', name: 'Vicky' }, { id: 'kids', name: 'Kids' }], bausteine: {} });
 let S = leer();
 let idb = null;
 function openIdb() {
@@ -611,6 +612,9 @@ function oeffnePosition(bid, pid) {
     if (fs[i].halb && fs[i + 1]?.halb) { html += `<div class="two">${feldHtml(fs[i], p)}${feldHtml(fs[i + 1], p)}</div>`; i++; }
     else html += feldHtml(fs[i], p);
   }
+  // Verschieben: nur in Bausteine mit derselben Vorlage, weil die Felder dort gleich sind
+  const ziele = Object.values(S.bausteine).filter(x => x.vorlage === b.vorlage).sort((x, y) => x.name.localeCompare(y.name));
+  if (pid && ziele.length > 1) html += `<label class="field"><span>Baustein (zum Verschieben ändern)</span><select name="_baustein">${ziele.map(x => `<option value="${x.id}" ${x.id === bid ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`;
   $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${pid ? esc(p.name) : V.posWort + ' hinzufügen'}</h2>${html}
     <div class="sheet-foot">${pid ? '<button type="button" class="btn danger left" data-act="posWeg">Löschen</button>' : ''}<button type="button" class="btn" data-act="zu">Abbrechen</button><button class="btn primary">Speichern</button></div></form>`;
   const form = $dlg.firstChild; const hl = form.querySelector('[data-hlist]');
@@ -640,7 +644,9 @@ function oeffnePosition(bid, pid) {
       if (val !== '' && val != null) neu[f.k] = val;
     }
     $dlg.close();
-    aendern(() => { b.positionen = b.positionen || {}; b.positionen[pid || uid()] = { ...neu, erstellt: p.erstellt || heute() }; });
+    const ziel = S.bausteine[fd.get('_baustein')] || b;
+    aendern(() => { if (pid && ziel !== b) delete b.positionen[pid]; ziel.positionen = ziel.positionen || {}; ziel.positionen[pid || uid()] = { ...neu, erstellt: p.erstellt || heute() }; });
+    if (ziel !== b) toast(`„${neu.name}“ nach ${ziel.name} verschoben`);
   };
   $dlg.showModal();
 }
@@ -730,8 +736,7 @@ async function importieren(file) {
 function beispiel() {
   const d = (m, t = 15) => { const x = new Date(); return new Date(x.getFullYear(), x.getMonth() - m, t, 12).toISOString().slice(0, 10); };
   const reihe = (start, rate, n) => Object.fromEntries(Array.from({ length: n }, (_, i) => [d(n - 1 - i, 1), Math.round(start + rate * i + Math.sin(i) * rate * 0.6)]));
-  const s = leer(); const ich = uid(), du = uid();
-  s.personen = [{ id: ich, name: 'Stephan' }, { id: du, name: 'Partnerin' }];
+  const s = leer(); const ich = 'stephan', du = 'vicky', kids = 'kids';
   const add = (vorlage, name, ps) => { const id = uid(); s.bausteine[id] = { id, vorlage, name, notiz: '', reihe: Object.keys(s.bausteine).length, positionen: Object.fromEntries(ps.map(p => [uid(), p])) }; };
   add('stand', 'ETF-Depot', [
     { name: 'Vanguard FTSE All-World', anbieter: 'Flatex', person: ich, sparrate: 300, werte: reihe(14000, 420, 18) },
@@ -759,9 +764,9 @@ function beispiel() {
   add('kosten', 'Feste & Geschenke', [
     { name: 'Weihnachten', betrag: 800, intervall: 'jahr', beginn: am(12, 15) },
     { name: 'Ostern', betrag: 150, intervall: 'jahr', beginn: am(4, 1) },
-    { name: 'Geburtstag Kind 1', betrag: 200, intervall: 'jahr', beginn: am(3, 10) },
-    { name: 'Geburtstag Kind 2', betrag: 200, intervall: 'jahr', beginn: am(8, 22) },
-    { name: 'Geburtstag Partnerin', person: du, betrag: 150, intervall: 'jahr', beginn: am(6, 5) },
+    { name: 'Geburtstag Kind 1', person: kids, betrag: 200, intervall: 'jahr', beginn: am(3, 10) },
+    { name: 'Geburtstag Kind 2', person: kids, betrag: 200, intervall: 'jahr', beginn: am(8, 22) },
+    { name: 'Geburtstag Vicky', person: du, betrag: 150, intervall: 'jahr', beginn: am(6, 5) },
   ]);
   add('kosten', 'Versicherungen', [
     { name: 'Kfz-Haftpflicht + Teilkasko', anbieter: 'Uniqa', betrag: 640, intervall: 'jahr', beginn: am(11, 20), frist: d(-1, 20) },
@@ -773,7 +778,7 @@ function beispiel() {
     { name: 'Netflix', betrag: 13.99, intervall: 'monat', beginn: am(1) },
     { name: 'Spotify Family', betrag: 17.99, intervall: 'monat', beginn: am(1) },
     { name: 'Handy Stephan', anbieter: 'Hot', person: ich, betrag: 9.9, intervall: 'monat', beginn: am(1) },
-    { name: 'Handy Partnerin', anbieter: 'Spusu', person: du, betrag: 12, intervall: 'monat', beginn: am(1) },
+    { name: 'Handy Vicky', anbieter: 'Spusu', person: du, betrag: 12, intervall: 'monat', beginn: am(1) },
   ]);
   add('kosten', 'Auto', [
     { name: 'Tanken', betrag: 140, intervall: 'monat', beginn: am(1) },

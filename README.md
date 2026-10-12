@@ -21,7 +21,7 @@ Vorhandene Vorlagen:
 
 **Monatsplanung (Laufende Kosten):** Die App rechnet für die nächsten 12 Monate aus, was in jedem Monat tatsächlich fällig ist, z. B. die Jahresrate im Dezember. Teure Monate sind orange markiert und erscheinen als Hinweis auf dem Dashboard. Tippen auf einen Monat zeigt jede Zahlung; Beträge lassen sich nur für diesen Monat ändern (z. B. Lebensmittel im Dezember 900 statt 650 €), und einmalige Ausgaben lassen sich ergänzen. Die Kennzahl „Ø/Monat“ ist der Schnitt dieser 12 Monate.
 
-Weitere Funktionen: Familienmitglieder mit Filter „wem gehört's“, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON (Export/Import), Beispieldaten zum Ausprobieren.
+Weitere Funktionen: Familienmitglieder (voreingestellt: Stephan, Vicky, Kids) mit Filter „wem gehört's“, Posten zwischen Bausteinen verschieben, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON (Export/Import), Beispieldaten zum Ausprobieren.
 
 ## Dateien
 
@@ -34,7 +34,7 @@ Weitere Funktionen: Familienmitglieder mit Filter „wem gehört's“, Zeitraum 
 
 ## Installation
 
-Die App liegt auf GitHub Pages unter `https://stephanclaude.github.io/<Repository-Name>/`.
+Die App liegt auf GitHub Pages: https://stephanclaude.github.io/Finanzen/ (das Sammelkarten-Depot vorerst unter …/Finanzen/tcg/).
 
 1. iPhone: Adresse in Safari öffnen → Teilen → „Zum Home-Bildschirm“.
 2. PC: Adresse in Chrome oder Edge öffnen → „App installieren“ in der Adresszeile.
