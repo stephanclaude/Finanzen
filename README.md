@@ -17,7 +17,9 @@ Vorhandene Vorlagen:
 | Vorlage | Bereich | Für |
 |---|---|---|
 | Stand-Verlauf | Vermögen | Konten, Depots, Vorsorge: ab und zu den Stand eintragen |
-| Kostenliste | Laufende Kosten | Verträge mit Betrag und Zahlungsintervall, Beginn, Ende, Kündigungstermin |
+| Kostenliste | Laufende Kosten | Kredite, Versicherungen, Abos, Lebensmittel, Feste … mit Betrag, Rhythmus (monatlich bis jährlich oder einmalig), Fälligkeit, Ende, Kündigungstermin |
+
+**Monatsplanung (Laufende Kosten):** Die App rechnet für die nächsten 12 Monate aus, was in jedem Monat tatsächlich fällig ist, z. B. die Jahresrate im Dezember. Teure Monate sind orange markiert und erscheinen als Hinweis auf dem Dashboard. Tippen auf einen Monat zeigt jede Zahlung; Beträge lassen sich nur für diesen Monat ändern (z. B. Lebensmittel im Dezember 900 statt 650 €), und einmalige Ausgaben lassen sich ergänzen. Die Kennzahl „Ø/Monat“ ist der Schnitt dieser 12 Monate.
 
 Weitere Funktionen: Familienmitglieder mit Filter „wem gehört's“, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON (Export/Import), Beispieldaten zum Ausprobieren.
 

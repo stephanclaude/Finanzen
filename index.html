@@ -97,6 +97,21 @@ a.card:hover { border-color: var(--accent); }
 .chart .ar { fill: var(--accent); fill-opacity: .10; }
 .chart .hair { stroke: var(--muted); stroke-width: 1; }
 .chart .pt { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.chart .bar { fill: var(--accent); }
+.chart .bar.hoch { fill: var(--warn); }
+.chart .avg { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.chart .sel { fill: var(--ink); fill-opacity: .06; }
+.chart[data-klick] svg { cursor: pointer; }
+.row.hoch .val { color: var(--warn); }
+.mon-row { display: grid; grid-template-columns: minmax(0, 1fr) 8.5em auto; gap: 2px 8px; align-items: center; border-bottom: 1px solid var(--line); padding: 6px 0; }
+.mon-row .t { min-width: 0; overflow-wrap: anywhere; }
+.mon-row .t small { display: block; color: var(--muted); font-size: 12px; }
+.mon-row input { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 6px 8px; font-family: var(--font-num); text-align: right; width: 100%; min-width: 0; }
+.mon-row input.anders { border-color: var(--warn); }
+.mon-sum { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.mon-add { display: grid; grid-template-columns: minmax(0, 1fr) 7em; gap: 6px; }
+.mon-add input, .mon-add select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 9px; min-width: 0; }
+.mon-add select { grid-column: 1 / -1; }
 .chart .note { position: absolute; inset: auto 0 6px 0; text-align: center; font-size: 12px; color: var(--muted); }
 .tip { position: absolute; top: 0; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgb(0 0 0 / .12); white-space: nowrap; }
 .tip b { display: block; font-family: var(--font-num); font-size: 13px; font-weight: 500; }
@@ -132,7 +147,7 @@ a.card:hover { border-color: var(--accent); }
 dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; background: var(--surface); color: var(--ink); width: min(520px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
 dialog::backdrop { background: rgb(10 15 20 / .45); }
 .sheet { display: grid; gap: 14px; padding: 18px; }
-.sheet h2 { font-size: 1.2rem; }
+.sheet h2 { font-size: 1.2rem; outline: none; }
 .field { display: grid; gap: 4px; }
 .field > span { font-size: 12px; color: var(--muted); font-weight: 500; }
 .field input, .field select, .field textarea { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
@@ -232,6 +247,11 @@ const fEur0 = v => eur0.format(v || 0);
 const heute = () => new Date().toISOString().slice(0, 10);
 const fDatum = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 const fMonat = d => new Date(d + 'T12:00:00').toLocaleDateString('de-AT', { month: 'short', year: '2-digit' });
+const ymHeute = () => heute().slice(0, 7);
+const ymPlus = (ym, n) => { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+const ymDiff = (a, b) => { const [ya, ma] = a.split('-').map(Number), [yb, mb] = b.split('-').map(Number); return (yb - ya) * 12 + mb - ma; };
+const fYm = (ym, lang) => new Date(ym + '-15T12:00:00').toLocaleDateString('de-AT', lang ? { month: 'long', year: 'numeric' } : { month: 'short', year: '2-digit' });
+const fEin = v => v == null || v === '' ? '' : Number.isInteger(v) ? String(v) : v.toFixed(2).replace('.', ',');
 const tageBis = d => Math.round((new Date(d + 'T12:00:00') - new Date(heute() + 'T12:00:00')) / 864e5);
 // akzeptiert 1234,5 · 1.234,50 · 1234.5
 const zahl = v => { if (v === '' || v == null) return null; let t = String(v).replace(/[\s€]/g, ''); if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); const n = Number(t); return t !== '' && isFinite(n) ? n : null; };
@@ -251,7 +271,7 @@ const BEREICHE = {
 /* ───────────── Ebene 3: Baustein-Vorlagen ─────────────
    Jede Vorlage gehört zu einem Bereich und liefert für eine Position ihren Wert an einem Stichtag.
    Neue Tracker (z. B. das Sammelkarten-Depot) werden als weitere Vorlage hier eingehängt. */
-const INTERVALLE = { monat: ['monatlich', 1], quartal: ['vierteljährlich', 3], halbjahr: ['halbjährlich', 6], jahr: ['jährlich', 12] };
+const INTERVALLE = { monat: ['monatlich', 1], quartal: ['vierteljährlich', 3], halbjahr: ['halbjährlich', 6], jahr: ['jährlich', 12], einmalig: ['einmalig', 0] };
 const VORLAGEN = {
   stand: {
     bereich: 'vermoegen', name: 'Stand-Verlauf',
@@ -276,27 +296,41 @@ const VORLAGEN = {
   },
   kosten: {
     bereich: 'kosten', name: 'Kostenliste',
-    info: 'Versicherungen, Abos, Handyverträge, Kreditraten, Auto … Betrag und Zahlungsintervall.',
-    posWort: 'Vertrag', posMehr: 'Verträge',
+    info: 'Kredite, Versicherungen, Abos, Handy, Auto, Lebensmittel, Feste … Betrag, Rhythmus und Fälligkeit. Die App plant daraus jeden Monat.',
+    posWort: 'Posten', posMehr: 'Posten',
     felder: [
-      { k: 'name', l: 'Bezeichnung', t: 'text', pflicht: true, ph: 'z. B. Kfz-Haftpflicht' },
+      { k: 'name', l: 'Bezeichnung', t: 'text', pflicht: true, ph: 'z. B. Kreditrate, Lebensmittel, Weihnachten' },
       { k: 'anbieter', l: 'Anbieter', t: 'text' },
       { k: 'person', l: 'Gehört', t: 'person' },
       { k: 'betrag', l: 'Betrag', t: 'eur', pflicht: true, halb: true },
-      { k: 'intervall', l: 'Zahlung', t: 'auswahl', optionen: Object.fromEntries(Object.entries(INTERVALLE).map(([k, v]) => [k, v[0]])), halb: true },
-      { k: 'beginn', l: 'Beginn', t: 'datum', halb: true },
-      { k: 'ende', l: 'Ende / gekündigt zum', t: 'datum', halb: true },
+      { k: 'intervall', l: 'Rhythmus', t: 'auswahl', optionen: Object.fromEntries(Object.entries(INTERVALLE).map(([k, v]) => [k, v[0]])), halb: true },
+      { k: 'beginn', l: 'Fällig am (erste Zahlung)', t: 'datum', halb: true },
+      { k: 'ende', l: 'Läuft bis (letzte Zahlung)', t: 'datum', halb: true },
       { k: 'frist', l: 'Nächster Kündigungs- oder Verlängerungstermin', t: 'datum' },
+      { k: 'abweichungen', l: 'Abweichungen einzelner Monate', t: 'abw' },
       { k: 'notiz', l: 'Notiz', t: 'notiz' },
     ],
-    monatlich: p => (p.betrag || 0) / (INTERVALLE[p.intervall || 'monat']?.[1] || 1),
-    wert(p, d) { if (p.beginn && p.beginn > d) return 0; if (p.ende && p.ende <= d) return 0; return this.monatlich(p); },
+    // Was in einem Monat (JJJJ-MM) tatsächlich fällig ist. Eine Abweichung für diesen Monat hat Vorrang.
+    zahlung(p, ym, ohneAbw) {
+      const ab = ohneAbw ? null : p.abweichungen?.[ym]; if (ab != null) return ab;
+      const n = INTERVALLE[p.intervall || 'monat']?.[1] ?? 1;
+      if (p.ende && ym > p.ende.slice(0, 7)) return 0;
+      if (!p.beginn) return n === 0 ? 0 : (p.betrag || 0) / n; // ohne Fälligkeit gleichmäßig verteilt
+      const k = ymDiff(p.beginn.slice(0, 7), ym); if (k < 0) return 0;
+      if (n === 0) return k === 0 ? p.betrag || 0 : 0;
+      return k % n === 0 ? p.betrag || 0 : 0;
+    },
+    // Wert = Durchschnitt pro Monat über die kommenden 12 Monate ab dem Stichtag
+    wert(p, d) { const ym = d.slice(0, 7); let sum = 0; for (let i = 0; i < 12; i++) sum += this.zahlung(p, ymPlus(ym, i)); return sum / 12; },
     daten: p => [p.beginn, p.ende].filter(Boolean),
+    naechste(p) { const h = ymHeute(); for (let i = 0; i < 36; i++) { const ym = ymPlus(h, i); const z = this.zahlung(p, ym); if (z) return { ym, z }; } return null; },
     zeile(p) {
       const iv = INTERVALLE[p.intervall || 'monat'];
-      const vorbei = p.ende && p.ende <= heute();
-      return { meta: [p.anbieter, personName(p.person), vorbei ? 'beendet ' + fDatum(p.ende) : p.ende ? 'endet ' + fDatum(p.ende) : ''].filter(Boolean).join(' · '),
-               sub: iv[1] === 1 ? '' : fEur(p.betrag) + ' ' + iv[0] };
+      const vorbei = p.ende && p.ende.slice(0, 7) < ymHeute();
+      const nx = this.naechste(p); const nAbw = Object.keys(p.abweichungen || {}).filter(k => k >= ymHeute()).length;
+      const rhythmus = iv[1] === 0 ? `einmalig${p.beginn ? ' ' + fYm(p.beginn.slice(0, 7)) : ''}` : `${fEur(p.betrag)} ${iv[0]}`;
+      return { meta: [p.anbieter, personName(p.person), vorbei ? 'beendet' : iv[1] > 1 && nx ? 'nächste ' + fYm(nx.ym) : '', !p.beginn && iv[1] > 1 ? 'ohne Fälligkeit, verteilt' : '', nAbw ? `${nAbw} Monat${nAbw > 1 ? 'e' : ''} angepasst` : ''].filter(Boolean).join(' · '),
+               sub: rhythmus };
     },
     hinweise(p) { if (!p.frist || (p.ende && p.ende <= heute())) return []; const t = tageBis(p.frist); return t >= 0 && t <= 45 ? [`Kündigungs-/Verlängerungstermin in ${t} Tagen (${fDatum(p.frist)})`] : []; },
   },
@@ -323,8 +357,21 @@ function verlauf(bausteine, wertFn) {
   pts.push({ d: h, v: wertFn(h) });
   return pts;
 }
+// Monatsplanung: was in den kommenden Monaten fällig ist, Posten für Posten
+function plan(bausteine, n = 12) {
+  const start = ymHeute();
+  return Array.from({ length: n }, (_, i) => {
+    const ym = ymPlus(start, i), posten = [];
+    for (const b of bausteine) { const V = VORLAGEN[b.vorlage]; if (!V?.zahlung) continue; for (const p of positionen(b)) { const z = V.zahlung(p, ym); if (z) posten.push({ b, p, z }); } }
+    return { ym, summe: posten.reduce((s, x) => s + x.z, 0), posten };
+  });
+}
+const schnitt = pl => pl.reduce((s, m) => s + m.summe, 0) / (pl.length || 1);
+const teuer = (m, avg) => avg > 0 && m.summe > avg * 1.2 && m.summe - avg >= 100;
 function hinweise() {
   const out = [];
+  const pl = plan(bausteineVon('kosten')), avg = schnitt(pl);
+  for (const m of pl.slice(0, 4)) if (teuer(m, avg)) out.push({ text: `${fEur0(m.summe)} fällig, ${fEur0(m.summe - avg)} mehr als im Schnitt (u. a. ${m.posten.sort((a, c) => c.z - a.z).slice(0, 2).map(x => x.p.name).join(', ')})`, wo: fYm(m.ym, true), href: `#/kosten/${m.ym}` });
   for (const b of Object.values(S.bausteine)) { const v = VORLAGEN[b.vorlage]; if (!v) continue;
     for (const p of positionen(b)) for (const t of v.hinweise(p)) out.push({ text: `${p.name}: ${t}`, wo: b.name, href: `#/b/${b.id}` }); }
   return out;
@@ -335,6 +382,7 @@ function chartHtml(pts, fmt) {
   return `<div class="chart" data-chart='${esc(JSON.stringify(pts))}' data-fmt="${fmt}" role="img" aria-label="Verlauf"></div>`;
 }
 function zeichneCharts() {
+  document.querySelectorAll('.chart[data-bars]').forEach(zeichneBalken);
   document.querySelectorAll('.chart[data-chart]').forEach(el => {
     const pts = JSON.parse(el.dataset.chart); const fmt = el.dataset.fmt === 'm' ? v => fEur(v) + '/Monat' : fEur;
     const W = el.clientWidth || 300, H = el.clientHeight || 170, L = 46, R = 8, T = 10, B = 22;
@@ -366,6 +414,40 @@ function zeichneCharts() {
     svg.addEventListener('pointerleave', () => { hov.hidden = true; tip.hidden = true; });
   });
 }
+function balkenHtml(pl, klick) {
+  return `<div class="chart" data-bars='${esc(JSON.stringify(pl.map(m => ({ ym: m.ym, v: Math.round(m.summe * 100) / 100, n: m.posten.length }))))}' ${klick ? 'data-klick="1"' : ''} role="img" aria-label="Fällige Zahlungen der nächsten 12 Monate"></div>`;
+}
+function zeichneBalken(el) {
+  const ms = JSON.parse(el.dataset.bars); const avg = ms.reduce((s, m) => s + m.v, 0) / (ms.length || 1);
+  const W = el.clientWidth || 300, H = el.clientHeight || 170, L = 46, R = 8, T = 10, B = 22;
+  if (!ms.some(m => m.v)) { el.innerHTML = '<div class="note">Die Planung erscheint, sobald Posten eingetragen sind.</div>'; return; }
+  const max = Math.max(...ms.map(m => m.v)); const step = nice(max / 3 || 1); const top = Math.ceil(max / step) * step;
+  const y = v => T + (top - v) / top * (H - T - B);
+  const bw = (W - L - R) / ms.length, gap = Math.max(2, bw * 0.22);
+  let s = '';
+  for (let g = 0; g <= top + step / 2; g += step) s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text class="ax" x="${L - 6}" y="${y(g) + 3}" text-anchor="end">${kompakt.format(g)}</text>`;
+  ms.forEach((m, i) => {
+    const x = L + i * bw + gap / 2, w = bw - gap, h = Math.max(0, y(0) - y(m.v)), r = Math.min(4, w / 2, h);
+    if (h > 0) s += `<path class="bar${teuer({ summe: m.v }, avg) ? ' hoch' : ''}" d="M${x},${y(0)}V${y(m.v) + r}Q${x},${y(m.v)} ${x + r},${y(m.v)}H${x + w - r}Q${x + w},${y(m.v)} ${x + w},${y(m.v) + r}V${y(0)}Z"/>`;
+    if (W >= 420 || i % 2 === 0) s += `<text class="ax" x="${x + w / 2}" y="${H - 6}" text-anchor="middle">${new Date(m.ym + '-15T12:00:00').toLocaleDateString('de-AT', { month: 'short' }).replace('.', '')}</text>`;
+  });
+  s += `<line class="avg" x1="${L}" x2="${W - R}" y1="${y(avg)}" y2="${y(avg)}"/><text class="ax" x="${W - R}" y="${y(avg) - 4}" text-anchor="end">Ø ${fEur0(avg)}</text>`;
+  s += `<rect class="sel" hidden rx="4"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${s}</svg><div class="tip" hidden></div>`;
+  const svg = el.firstChild, tip = el.querySelector('.tip'), sel = svg.querySelector('.sel');
+  const idx = cx => Math.max(0, Math.min(ms.length - 1, Math.floor((cx - L) / bw)));
+  const zeig = cx => {
+    const i = idx(cx), m = ms[i];
+    sel.hidden = false; sel.setAttribute('x', L + i * bw + 1); sel.setAttribute('y', T); sel.setAttribute('width', bw - 2); sel.setAttribute('height', H - T - B);
+    tip.hidden = false; tip.innerHTML = ''; const b = document.createElement('b'); b.textContent = fEur(m.v);
+    const sp = document.createElement('span'); sp.textContent = `${fYm(m.ym, true)} · ${m.n} Zahlung${m.n === 1 ? '' : 'en'}`;
+    tip.append(b, sp); const tw = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(W - tw, L + i * bw + bw / 2 - tw / 2)) + 'px'; tip.style.top = Math.max(0, y(m.v) - 52) + 'px';
+  };
+  svg.addEventListener('pointermove', e => zeig(e.clientX - svg.getBoundingClientRect().left));
+  svg.addEventListener('pointerdown', e => zeig(e.clientX - svg.getBoundingClientRect().left));
+  svg.addEventListener('pointerleave', () => { sel.hidden = true; tip.hidden = true; });
+  if (el.dataset.klick) svg.addEventListener('click', e => { const i = idx(e.clientX - svg.getBoundingClientRect().left); oeffneMonat(ms[i].ym); });
+}
 function nice(v) { const p = 10 ** Math.floor(Math.log10(v)); const f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
 
 /* ───────────── Ansichten ───────────── */
@@ -373,16 +455,16 @@ const $view = document.getElementById('view'), $crumbs = document.getElementById
 function crumbs(teile) {
   $crumbs.innerHTML = teile.map((t, i) => i === teile.length - 1 ? `<span class="cur">${esc(t[0])}</span>` : `<a href="${t[1]}">${esc(t[0])}</a><span class="sep">›</span>`).join('');
 }
-function filterzeile() {
+function filterzeile(mitZeitraum = true) {
   const pers = S.personen.length ? `<button class="chip" data-person="" aria-pressed="${!personFilter}">Alle</button>` + S.personen.map(p => `<button class="chip" data-person="${p.id}" aria-pressed="${personFilter === p.id}">${esc(p.name)}</button>`).join('') : '';
   const zr = [['12', '1 J'], ['36', '3 J'], ['alles', 'Max']].map(([k, l]) => `<button class="chip" data-zeitraum="${k}" aria-pressed="${zeitraum === k}">${l}</button>`).join('');
-  return `<div class="filters">${pers}<span class="gap"></span>${zr}</div>`;
+  return pers || mitZeitraum ? `<div class="filters">${pers}<span class="gap"></span>${mitZeitraum ? zr : ''}</div>` : '';
 }
 
 function viewDashboard() {
   crumbs([['Dashboard']]);
   const v = bereichWert('vermoegen'), vAlt = bereichWert('vermoegen', vormonatsende());
-  const k = bereichWert('kosten'), kAlt = bereichWert('kosten', vormonatsende());
+  const kpl = plan(bausteineVon('kosten')), k = schnitt(kpl);
   const nb = { vermoegen: bausteineVon('vermoegen').length, kosten: bausteineVon('kosten').length };
   const hw = hinweise();
   return filterzeile() + `
@@ -395,9 +477,9 @@ function viewDashboard() {
     </a>
     <a class="card" href="#/kosten">
       <div class="card-head"><h2>Laufende Kosten</h2><span class="go">${nb.kosten} Bausteine ›</span></div>
-      <div class="big">${fEur0(k)}<small>/Monat</small></div>
-      <div class="figs"><span>pro Jahr <b>${fEur0(k * 12)}</b></span>${k !== kAlt && nb.kosten ? `<span>${diff(k, kAlt, fEur)}</span>` : ''}</div>
-      ${chartHtml(verlauf(bausteineVon('kosten'), d => bereichWert('kosten', d)), 'm')}
+      <div class="big">${fEur0(k)}<small>Ø/Monat</small></div>
+      <div class="figs"><span>${fYm(kpl[0].ym, true).split(' ')[0]} <b>${fEur0(kpl[0].summe)}</b></span><span>nächste 12 Monate <b>${fEur0(k * 12)}</b></span></div>
+      ${balkenHtml(kpl)}
     </a>
   </div>
   ${hw.length ? `<div class="notes">${hw.map(h => `<a href="${h.href}"><span class="lab">${esc(h.wo)}</span><span>${esc(h.text)}</span></a>`).join('')}</div>` : ''}
@@ -407,23 +489,35 @@ function viewDashboard() {
 function viewBereich(ber) {
   const B = BEREICHE[ber]; crumbs([['Dashboard', '#/'], [B.name]]);
   const bs = bausteineVon(ber).map(b => [b, bausteinWert(b)]).sort((a, c) => c[1] - a[1]).map(x => x[0]); const gesamt = bereichWert(ber), alt = bereichWert(ber, vormonatsende());
-  const m = ber === 'kosten';
+  const m = ber === 'kosten'; const pl = m ? plan(bs) : null, avg = m ? schnitt(pl) : 0;
   const zeilen = bs.map(b => {
     const w = bausteinWert(b), n = positionen(b).length; const anteil = gesamt > 0 ? Math.max(0, w / gesamt * 100) : 0;
     return `<a class="row" href="#/b/${b.id}"><span class="name">${esc(b.name)}</span><span class="val">${fEur(w)}${m ? '<span class="muted">/M</span>' : ''}</span>
       <span class="meta">${n} ${n === 1 ? VORLAGEN[b.vorlage].posWort : VORLAGEN[b.vorlage].posMehr}</span><span class="sub">${gesamt > 0 ? Math.round(anteil) + ' %' : ''}</span>
       <span class="share"><span style="width:${anteil.toFixed(1)}%"></span></span></a>`;
   }).join('');
-  return filterzeile() + `
-  <section class="card">
-    <div class="lab">${B.name}${m ? ' pro Monat' : ''}</div>
-    <div class="big">${fEur0(gesamt)}${m ? '<small>/Monat</small>' : ''}</div>
-    <div class="figs">${m ? `<span>pro Jahr <b>${fEur0(gesamt * 12)}</b></span>` : ''}${bs.length ? `<span>${diff(gesamt, alt)}</span>` : ''}</div>
-    ${chartHtml(verlauf(bs, d => bereichWert(ber, d)), m ? 'm' : 'e')}
-  </section>
+  const kopf = m ? `
+    <div class="lab">Laufende Kosten · Planung</div>
+    <div class="big">${fEur0(avg)}<small>Ø/Monat</small></div>
+    <div class="figs"><span>nächste 12 Monate <b>${fEur0(avg * 12)}</b></span><span>Tippe auf einen Monat zum Anpassen</span></div>
+    ${balkenHtml(pl, true)}` : `
+    <div class="lab">${B.name}</div>
+    <div class="big">${fEur0(gesamt)}</div>
+    <div class="figs">${bs.length ? `<span>${diff(gesamt, alt)}</span>` : ''}</div>
+    ${chartHtml(verlauf(bs, d => bereichWert(ber, d)), 'e')}`;
+  return filterzeile(!m) + `
+  <section class="card">${kopf}</section>
   <section class="list">
     <div class="list-head"><h2>Bausteine</h2><button class="btn small primary" data-act="neuBaustein" data-bereich="${ber}">+ Baustein</button></div>
     ${zeilen || `<div class="empty">${B.leer}</div>`}
+  </section>
+  ${m && bs.length ? monatsListe(pl, avg) : ''}`;
+}
+
+function monatsListe(pl, avg) {
+  return `<section class="list"><div class="list-head"><h2>Monatsplanung</h2></div>
+    ${pl.map(mo => `<button class="row${teuer(mo, avg) ? ' hoch' : ''}" data-act="monat" data-ym="${mo.ym}"><span class="name">${fYm(mo.ym, true)}</span><span class="val">${fEur(mo.summe)}</span>
+      <span class="meta">${mo.posten.length} Zahlung${mo.posten.length === 1 ? '' : 'en'}${mo.posten.some(x => x.p.abweichungen?.[mo.ym] != null) ? ' · angepasst' : ''}</span><span class="sub ${teuer(mo, avg) ? 'warn' : ''}">${avg > 0 ? (mo.summe >= avg ? '+' : '−') + fEur0(Math.abs(mo.summe - avg)) + ' zum Ø' : ''}</span></button>`).join('')}
   </section>`;
 }
 
@@ -434,15 +528,15 @@ function viewBaustein(id) {
   const ps = positionen(b); const w = bausteinWert(b);
   const zeilen = ps.map(p => ({ p, w: V.wert(p, heute()) })).sort((a, c) => c.w - a.w || a.p.name.localeCompare(c.p.name)).map(({ p, w: pw }) => {
     const z = V.zeile(p);
-    return `<button class="row" data-act="pos" data-id="${p.id}"><span class="name">${esc(p.name)}</span><span class="val">${fEur(pw)}${m ? '<span class="muted">/M</span>' : ''}</span>
+    return `<button class="row" data-act="pos" data-id="${p.id}"><span class="name">${esc(p.name)}</span><span class="val">${fEur(pw)}${m ? '<span class="muted"> Ø/M</span>' : ''}</span>
       <span class="meta">${esc(z.meta)}</span><span class="sub">${esc(z.sub)}</span></button>`;
   }).join('');
-  return filterzeile() + `
+  return filterzeile(!m) + `
   <section class="card">
     <div class="card-head"><div class="lab">${esc(b.name)} · ${V.name}</div><button class="btn small" data-act="bausteinBearbeiten">Bearbeiten</button></div>
-    <div class="big">${fEur0(w)}${m ? '<small>/Monat</small>' : ''}</div>
-    <div class="figs">${m ? `<span>pro Jahr <b>${fEur0(w * 12)}</b></span>` : `<span>${diff(w, bausteinWert(b, vormonatsende()))}</span>`}</div>
-    ${chartHtml(verlauf([b], d => bausteinWert(b, d)), m ? 'm' : 'e')}
+    <div class="big">${fEur0(w)}${m ? '<small>Ø/Monat</small>' : ''}</div>
+    <div class="figs">${m ? `<span>nächste 12 Monate <b>${fEur0(w * 12)}</b></span>` : `<span>${diff(w, bausteinWert(b, vormonatsende()))}</span>`}</div>
+    ${m ? balkenHtml(plan([b]), true) : chartHtml(verlauf([b], d => bausteinWert(b, d)), 'e')}
   </section>
   <section class="list">
     <div class="list-head"><h2>${V.posMehr}</h2><button class="btn small primary" data-act="pos" data-id="">+ ${V.posWort}</button></div>
@@ -477,6 +571,7 @@ function viewEinstellungen() {
 function render() {
   const h = location.hash.replace(/^#\/?/, '').split('/');
   let html;
+  if (h[0] === 'kosten' && /^\d{4}-\d{2}$/.test(h[1] || '')) setTimeout(() => { history.replaceState(null, '', '#/kosten'); oeffneMonat(h[1]); });
   if (h[0] === 'vermoegen' || h[0] === 'kosten') html = viewBereich(h[0]);
   else if (h[0] === 'b' && h[1]) html = viewBaustein(h[1]);
   else if (h[0] === 'einstellungen') html = viewEinstellungen();
@@ -492,11 +587,12 @@ function feldHtml(f, p) {
   const wrap = inner => `<label class="field"><span>${f.l}</span>${inner}</label>`;
   switch (f.t) {
     case 'text': return wrap(`<input name="${f.k}" value="${esc(v)}" ${f.pflicht ? 'required' : ''} placeholder="${esc(f.ph || '')}" autocomplete="off">`);
-    case 'eur': return wrap(`<input name="${f.k}" inputmode="decimal" value="${v === '' ? '' : String(v).replace('.', ',')}" ${f.pflicht ? 'required' : ''} pattern="[0-9.,\s€\-]*" autocomplete="off">`);
+    case 'eur': return wrap(`<input name="${f.k}" inputmode="decimal" value="${fEin(v)}" ${f.pflicht ? 'required' : ''} pattern="[0-9.,\s€\-]*" autocomplete="off">`);
     case 'datum': return wrap(`<input name="${f.k}" type="date" value="${esc(v)}">`);
     case 'notiz': return wrap(`<textarea name="${f.k}">${esc(v)}</textarea>`);
     case 'auswahl': return wrap(`<select name="${f.k}">${Object.entries(f.optionen).map(([k, l]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`);
     case 'person': return S.personen.length ? wrap(`<select name="${f.k}"><option value="">Familie / gemeinsam</option>${S.personen.map(x => `<option value="${x.id}" ${v === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`) : '';
+    case 'abw': return Object.keys(v || {}).length ? `<div class="field"><span>${f.l}</span><div class="hist" data-abwlist></div><small class="muted">Ändern über die Monatsplanung unter Laufende Kosten.</small></div>` : '';
     case 'verlauf': return `<div class="field"><span>${f.l}</span><div class="hist" data-verlauf>
       <div class="hist-add"><input type="date" data-h="d" value="${heute()}" aria-label="Datum"><input inputmode="decimal" data-h="v" placeholder="Betrag €" aria-label="Betrag" autocomplete="off"><button type="button" class="btn small" data-act="histAdd">Eintragen</button></div>
       <div data-hlist></div></div></div>`;
@@ -508,24 +604,28 @@ function histListe(werte) {
 }
 function oeffnePosition(bid, pid) {
   const b = S.bausteine[bid], V = VORLAGEN[b.vorlage];
-  const p = pid ? structuredClone(b.positionen[pid]) : { person: personFilter || '', intervall: 'monat' };
-  let werte = { ...(p.werte || {}) };
+  const p = pid ? structuredClone(b.positionen[pid]) : { person: personFilter || '', intervall: 'monat', beginn: V.bereich === 'kosten' ? heute() : undefined };
+  let werte = { ...(p.werte || {}) }, abw = { ...(p.abweichungen || {}) };
   let html = ''; const fs = V.felder;
   for (let i = 0; i < fs.length; i++) {
     if (fs[i].halb && fs[i + 1]?.halb) { html += `<div class="two">${feldHtml(fs[i], p)}${feldHtml(fs[i + 1], p)}</div>`; i++; }
     else html += feldHtml(fs[i], p);
   }
-  $dlg.innerHTML = `<form class="sheet" method="dialog"><h2>${pid ? esc(p.name) : V.posWort + ' hinzufügen'}</h2>${html}
+  $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${pid ? esc(p.name) : V.posWort + ' hinzufügen'}</h2>${html}
     <div class="sheet-foot">${pid ? '<button type="button" class="btn danger left" data-act="posWeg">Löschen</button>' : ''}<button type="button" class="btn" data-act="zu">Abbrechen</button><button class="btn primary">Speichern</button></div></form>`;
   const form = $dlg.firstChild; const hl = form.querySelector('[data-hlist]');
   const zeigWerte = () => { if (hl) hl.innerHTML = histListe(werte); };
   zeigWerte();
+  const al = form.querySelector('[data-abwlist]');
+  const zeigAbw = () => { if (al) al.innerHTML = Object.entries(abw).sort().map(([ym, v]) => `<div class="hist-row"><span>${fYm(ym, true)}</span><span class="num">${fEur(v)}</span><button type="button" class="x" data-act="abwWeg" data-ym="${ym}" aria-label="Abweichung löschen">✕</button></div>`).join('') || '<div class="muted" style="font-size:13px">keine</div>'; };
+  zeigAbw();
   // offene Eingabe im Stand-Feld wird beim Speichern mitgenommen
   const nimmHist = () => { const d = form.querySelector('[data-h=d]'), v = form.querySelector('[data-h=v]'); if (d && v && zahl(v.value) != null && d.value) { werte[d.value] = zahl(v.value); v.value = ''; zeigWerte(); } };
   form.onclick = e => {
     const a = e.target.closest('[data-act]')?.dataset.act;
     if (a === 'histAdd') nimmHist();
     if (a === 'histWeg') { delete werte[e.target.closest('[data-d]').dataset.d]; zeigWerte(); }
+    if (a === 'abwWeg') { delete abw[e.target.closest('[data-ym]').dataset.ym]; zeigAbw(); }
     if (a === 'zu') $dlg.close();
     if (a === 'posWeg' && confirm(`„${p.name}“ löschen?`)) { $dlg.close(); aendern(() => { delete b.positionen[pid]; }); }
   };
@@ -534,6 +634,7 @@ function oeffnePosition(bid, pid) {
     const fd = new FormData(form); const neu = {};
     for (const f of V.felder) {
       if (f.t === 'verlauf') { neu[f.k] = werte; continue; }
+      if (f.t === 'abw') { if (Object.keys(abw).length) neu[f.k] = abw; continue; }
       const raw = fd.get(f.k); if (raw == null) continue;
       const val = f.t === 'eur' ? zahl(raw) : String(raw).trim();
       if (val !== '' && val != null) neu[f.k] = val;
@@ -543,10 +644,53 @@ function oeffnePosition(bid, pid) {
   };
   $dlg.showModal();
 }
+// Ein Monat im Detail: jede fällige Zahlung, Betrag nur für diesen Monat änderbar, einmalige Ausgabe ergänzen
+function oeffneMonat(ym) {
+  const bid = location.hash.split('/')[1] === 'b' ? location.hash.split('/')[2] : null;
+  const bs = bid ? [S.bausteine[bid]] : bausteineVon('kosten'); if (!bs[0]) return;
+  const mo = plan(bs, ymDiff(ymHeute(), ym) + 1).at(-1); const avg = schnitt(plan(bs));
+  const posten = mo.posten.sort((a, c) => c.z - a.z || a.p.name.localeCompare(c.p.name));
+  const zeile = (x, i) => { const reg = VORLAGEN.kosten.zahlung(x.p, ym, true); const anders = x.p.abweichungen?.[ym] != null;
+    return `<div class="mon-row"><span class="t">${esc(x.p.name)}<small>${esc(x.b.name)}${anders ? ' · regulär ' + fEur(reg) : ''}</small></span>
+      <input inputmode="decimal" data-i="${i}" value="${fEin(x.z)}" class="${anders ? 'anders' : ''}" aria-label="Betrag ${esc(x.p.name)}" autocomplete="off">
+      ${anders ? `<button type="button" class="x" data-act="reset" data-i="${i}" title="auf regulär zurücksetzen" aria-label="zurücksetzen">↺</button>` : '<span></span>'}</div>`; };
+  $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${fYm(ym, true)}</h2>
+    <div class="mon-sum"><span>${posten.length} Zahlung${posten.length === 1 ? '' : 'en'} · Ø ${fEur0(avg)}</span><b class="num">${fEur(mo.summe)}</b></div>
+    <div>${posten.map(zeile).join('') || '<p class="muted">In diesem Monat ist nichts fällig.</p>'}</div>
+    <div class="field"><span>Einmalige Ausgabe in diesem Monat</span><div class="mon-add">
+      <input name="einName" placeholder="z. B. Geburtstag Oma, Reparatur" autocomplete="off"><input name="einBetrag" inputmode="decimal" placeholder="€" autocomplete="off">
+      ${bs.length > 1 ? `<select name="einB" aria-label="Baustein"><option value="">In welchen Baustein?</option>${bs.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>` : ''}</div></div>
+    <p class="muted" style="font-size:12px;margin:0">Geänderte Beträge gelten nur für ${fYm(ym, true)}. Der reguläre Betrag bleibt für alle anderen Monate.</p>
+    <div class="sheet-foot"><button type="button" class="btn" data-act="zu">Abbrechen</button><button class="btn primary">Speichern</button></div></form>`;
+  const form = $dlg.firstChild;
+  form.onclick = e => {
+    const el = e.target.closest('[data-act]'); const a = el?.dataset.act;
+    if (a === 'zu') $dlg.close();
+    if (a === 'reset') { const x = posten[el.dataset.i]; const inp = form.querySelector(`input[data-i="${el.dataset.i}"]`); inp.value = fEin(VORLAGEN.kosten.zahlung(x.p, ym, true)); inp.classList.remove('anders'); }
+  };
+  form.onsubmit = e => {
+    e.preventDefault(); const fd = new FormData(form);
+    if (String(fd.get('einName') || '').trim() && zahl(fd.get('einBetrag')) && bs.length > 1 && !fd.get('einB')) { form.querySelector('[name=einB]').focus(); return toast('Bitte wähle einen Baustein für die einmalige Ausgabe'); }
+    $dlg.close();
+    aendern(() => {
+      posten.forEach((x, i) => {
+        const val = zahl(form.querySelector(`input[data-i="${i}"]`).value); if (val == null) return;
+        const p = S.bausteine[x.b.id].positionen[x.p.id]; const reg = VORLAGEN.kosten.zahlung(p, ym, true);
+        if ((p.intervall || 'monat') === 'einmalig') { p.betrag = val; if (p.abweichungen) delete p.abweichungen[ym]; return; }
+        p.abweichungen = p.abweichungen || {};
+        if (Math.abs(val - reg) < 0.005) delete p.abweichungen[ym]; else p.abweichungen[ym] = val;
+        if (!Object.keys(p.abweichungen).length) delete p.abweichungen;
+      });
+      const n = String(fd.get('einName') || '').trim(), v = zahl(fd.get('einBetrag'));
+      if (n && v) { const b = S.bausteine[fd.get('einB') || bs[0].id]; b.positionen[uid()] = { name: n, betrag: v, intervall: 'einmalig', beginn: ym + '-01', person: personFilter || undefined, erstellt: heute() }; }
+    });
+  };
+  $dlg.showModal();
+}
 function oeffneBaustein(ber, bid) {
   const b = bid ? S.bausteine[bid] : null;
   const vs = Object.entries(VORLAGEN).filter(([, v]) => v.bereich === ber);
-  $dlg.innerHTML = `<form class="sheet" method="dialog"><h2>${b ? 'Baustein bearbeiten' : 'Neuer Baustein in ' + BEREICHE[ber].name}</h2>
+  $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${b ? 'Baustein bearbeiten' : 'Neuer Baustein in ' + BEREICHE[ber].name}</h2>
     <label class="field"><span>Name</span><input name="name" required value="${esc(b?.name || '')}" placeholder="${ber === 'kosten' ? 'z. B. Versicherungen' : 'z. B. ETF-Depot'}" autocomplete="off"></label>
     ${b ? '' : `<div class="field"><span>Vorlage</span><div class="typ">${vs.map(([k, v], i) => `<label><input type="radio" name="vorlage" value="${k}" ${i === 0 ? 'checked' : ''}><b>${v.name}</b><small>${v.info}</small></label>`).join('')}</div></div>`}
     <label class="field"><span>Notiz</span><textarea name="notiz">${esc(b?.notiz || '')}</textarea></label>
@@ -601,20 +745,40 @@ function beispiel() {
     { name: 'Prämienbegünstigte Zukunftsvorsorge', anbieter: 'Wiener Städtische', person: du, sparrate: 100, werte: { [d(14)]: 6200, [d(2)]: 7600 } },
     { name: 'Abfertigung neu', anbieter: 'VBV', person: ich, werte: { [d(13)]: 8900, [d(1)]: 10100 } },
   ]);
+  // Fälligkeit in einem bestimmten Kalendermonat, erste Zahlung im Vorjahr (wiederholt sich dann)
+  const Y = new Date().getFullYear(), am = (m, t = 1, y = Y - 1) => `${y}-${String(m).padStart(2, '0')}-${String(t).padStart(2, '0')}`;
+  const ymJetzt = new Date().toISOString().slice(0, 7), dez = `${Y}-12`;
+  add('kosten', 'Kredite', [
+    { name: 'Wohnkredit', anbieter: 'Bausparkasse', betrag: 890, intervall: 'monat', beginn: am(3, 1, Y - 6), ende: am(2, 1, Y + 19) },
+    { name: 'Autokredit Jahresrate', anbieter: 'Santander', betrag: 1500, intervall: 'jahr', beginn: am(12, 1), ende: am(12, 1, Y + 2) },
+  ]);
+  add('kosten', 'Haushalt', [
+    { name: 'Lebensmittel', betrag: 650, intervall: 'monat', beginn: am(1), abweichungen: { [dez]: 900 } },
+    { name: 'Drogerie & Haushalt', betrag: 90, intervall: 'monat', beginn: am(1) },
+  ]);
+  add('kosten', 'Feste & Geschenke', [
+    { name: 'Weihnachten', betrag: 800, intervall: 'jahr', beginn: am(12, 15) },
+    { name: 'Ostern', betrag: 150, intervall: 'jahr', beginn: am(4, 1) },
+    { name: 'Geburtstag Kind 1', betrag: 200, intervall: 'jahr', beginn: am(3, 10) },
+    { name: 'Geburtstag Kind 2', betrag: 200, intervall: 'jahr', beginn: am(8, 22) },
+    { name: 'Geburtstag Partnerin', person: du, betrag: 150, intervall: 'jahr', beginn: am(6, 5) },
+  ]);
   add('kosten', 'Versicherungen', [
-    { name: 'Kfz-Haftpflicht + Teilkasko', anbieter: 'Uniqa', betrag: 640, intervall: 'jahr', beginn: d(30), frist: d(-1, 20) },
-    { name: 'Haushalt & Eigenheim', anbieter: 'Generali', betrag: 38.5, intervall: 'monat', beginn: d(40) },
-    { name: 'Ablebensversicherung', anbieter: 'Wiener Städtische', person: ich, betrag: 21.9, intervall: 'monat', beginn: d(26) },
-    { name: 'Unfallversicherung Familie', anbieter: 'Donau', betrag: 112, intervall: 'quartal', beginn: d(20) },
+    { name: 'Kfz-Haftpflicht + Teilkasko', anbieter: 'Uniqa', betrag: 640, intervall: 'jahr', beginn: am(11, 20), frist: d(-1, 20) },
+    { name: 'Haushalt & Eigenheim', anbieter: 'Generali', betrag: 38.5, intervall: 'monat', beginn: am(1) },
+    { name: 'Ablebensversicherung', anbieter: 'Wiener Städtische', person: ich, betrag: 21.9, intervall: 'monat', beginn: am(1) },
+    { name: 'Unfallversicherung Familie', anbieter: 'Donau', betrag: 112, intervall: 'quartal', beginn: am(1) },
   ]);
-  add('kosten', 'Abos', [
-    { name: 'Netflix', betrag: 13.99, intervall: 'monat', beginn: d(16) },
-    { name: 'Spotify Family', betrag: 17.99, intervall: 'monat', beginn: d(9) },
-    { name: 'Zeitung digital', betrag: 99, intervall: 'jahr', beginn: d(24), ende: d(3) },
+  add('kosten', 'Abos & Handy', [
+    { name: 'Netflix', betrag: 13.99, intervall: 'monat', beginn: am(1) },
+    { name: 'Spotify Family', betrag: 17.99, intervall: 'monat', beginn: am(1) },
+    { name: 'Handy Stephan', anbieter: 'Hot', person: ich, betrag: 9.9, intervall: 'monat', beginn: am(1) },
+    { name: 'Handy Partnerin', anbieter: 'Spusu', person: du, betrag: 12, intervall: 'monat', beginn: am(1) },
   ]);
-  add('kosten', 'Handyverträge', [
-    { name: 'Handy Stephan', anbieter: 'Hot', person: ich, betrag: 9.9, intervall: 'monat', beginn: d(22) },
-    { name: 'Handy Partnerin', anbieter: 'Spusu', person: du, betrag: 12, intervall: 'monat', beginn: d(22) },
+  add('kosten', 'Auto', [
+    { name: 'Tanken', betrag: 140, intervall: 'monat', beginn: am(1) },
+    { name: 'Service & Pickerl', betrag: 420, intervall: 'jahr', beginn: am(5, 10) },
+    { name: 'Winterreifen', betrag: 680, intervall: 'einmalig', beginn: `${ymJetzt}-20` },
   ]);
   return s;
 }
@@ -631,6 +795,7 @@ document.addEventListener('click', e => {
   if (a === 'neuBaustein') oeffneBaustein(el.dataset.bereich);
   if (a === 'bausteinBearbeiten') oeffneBaustein(VORLAGEN[S.bausteine[bid].vorlage].bereich, bid);
   if (a === 'pos') oeffnePosition(bid, el.dataset.id);
+  if (a === 'monat') oeffneMonat(el.dataset.ym);
   if (a === 'personWeg' && confirm('Person entfernen? Ihre Positionen bleiben erhalten und zählen dann zu „Familie“.')) aendern(() => { S.personen = S.personen.filter(p => p.id !== el.dataset.id); for (const b of Object.values(S.bausteine)) for (const p of Object.values(b.positionen || {})) if (p.person === el.dataset.id) delete p.person; if (personFilter === el.dataset.id) personFilter = ''; });
   if (a === 'export') exportieren();
   if (a === 'demo' && confirm('Beispieldaten laden? Die Daten auf diesem Gerät werden ersetzt.')) { aendern(() => { S = beispiel(); }); location.hash = '#/'; }
