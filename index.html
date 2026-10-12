@@ -511,6 +511,7 @@ function viewBereich(ber) {
   <section class="list">
     <div class="list-head"><h2>Bausteine</h2><button class="btn small primary" data-act="neuBaustein" data-bereich="${ber}">+ Baustein</button></div>
     ${zeilen || `<div class="empty">${B.leer}</div>`}
+    ${m ? '' : `<a class="row" href="tcg/"><span class="name">Sammelkarten-Depot</span><span class="val muted">öffnen ›</span><span class="meta">läuft noch eigenständig, wird bald hier eingerechnet</span></a>`}
   </section>
   ${m && bs.length ? monatsListe(pl, avg) : ''}`;
 }
@@ -560,6 +561,12 @@ function viewEinstellungen() {
     <h2>Sicherung</h2>
     <p>Alle Daten liegen nur auf diesem Gerät (${Object.keys(S.bausteine).length} Bausteine, ${anzahl} Positionen). Abgleich zwischen iPhone und PC: hier exportieren, auf dem anderen Gerät importieren, z. B. über iCloud Drive.</p>
     <div class="actions" style="margin:0"><button class="btn primary" data-act="export">Backup exportieren</button><label class="btn">Backup importieren<input type="file" accept="application/json,.json" data-act="import" hidden></label></div>
+    <p>Ein Backup des Sammelkarten-Depots kannst du hier ebenfalls importieren, es landet dann im Depot.</p>
+  </section>
+  <section class="section">
+    <h2>Sammelkarten-Depot</h2>
+    <p>Läuft vorerst noch eigenständig und wird als nächstes als Baustein unter Vermögen eingebunden.</p>
+    <div class="actions" style="margin:0"><a class="btn" href="tcg/">Sammelkarten-Depot öffnen</a></div>
   </section>
   <section class="section">
     <h2>Ausprobieren</h2>
@@ -723,10 +730,30 @@ async function exportieren() {
   if (navigator.canShare?.({ files: [file] }) && /iPhone|iPad/.test(navigator.userAgent)) { try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
+// Backup des Sammelkarten-Depots: landet im Speicher des Depots unter tcg/ (gleiche Adresse, gleicher Browser-Speicher)
+function tcgImport(j) {
+  const list = Array.isArray(j) ? j : j?.positionen;
+  if (!Array.isArray(list) || !list.length || list.some(p => !p || typeof p.name !== 'string')) return false;
+  if (!confirm(`Das ist ein Backup des Sammelkarten-Depots${j.exportiert ? ' vom ' + new Date(j.exportiert).toLocaleDateString('de-AT') : ''} mit ${list.length} Positionen. Ins Sammelkarten-Depot laden? Die Depotdaten auf diesem Gerät werden ersetzt.`)) return true;
+  const r = indexedDB.open('sammelkarten-depot', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('kv');
+  r.onerror = () => toast('Import fehlgeschlagen');
+  r.onsuccess = () => {
+    const db = r.result, tx = db.transaction('kv', 'readwrite'), st = tx.objectStore('kv');
+    const alt = st.get('state');
+    alt.onsuccess = () => {
+      const positionen = {}; for (const p of list) { const { id, ...rest } = p; positionen[id || uid()] = rest; }
+      st.put({ positionen, einstellungen: j.einstellungen || alt.result?.einstellungen || {} }, 'state');
+    };
+    tx.oncomplete = () => { db.close(); toast(`${list.length} Positionen ins Sammelkarten-Depot geladen`); setTimeout(() => { if (confirm('Sammelkarten-Depot jetzt öffnen?')) location.href = 'tcg/'; }, 400); };
+    tx.onerror = () => toast('Import fehlgeschlagen');
+  };
+  return true;
+}
 async function importieren(file) {
   try {
     const j = JSON.parse(await file.text());
-    if (j.app !== 'finanzen' || !j.daten?.bausteine) return toast('Das ist kein Finanzen-Backup');
+    if (j.app !== 'finanzen' || !j.daten?.bausteine) { if (!tcgImport(j)) toast('Diese Datei ist weder ein Finanzen- noch ein Sammelkarten-Backup'); return; }
     const n = Object.keys(j.daten.bausteine).length;
     if (!confirm(`Backup vom ${new Date(j.exportiert).toLocaleString('de-AT')} mit ${n} Bausteinen einlesen? Die Daten auf diesem Gerät werden ersetzt.`)) return;
     await aendern(() => { S = Object.assign(leer(), j.daten); });
