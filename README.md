@@ -23,7 +23,7 @@ Aussehen, Felder, Berechnungen, Wochenpflege, Cardmarket-Filter, Abgänge (verka
 
 ## Installation
 
-Die App liegt auf GitHub Pages: https://stephanclaude.github.io/tcg-depot/ Dort liegt nur der Programmcode, nie die Depotdaten.
+Die App liegt auf GitHub Pages: https://stephanclaude.github.io/TCG-depot/ Dort liegt nur der Programmcode, nie die Depotdaten.
 
 1. iPhone: Adresse in Safari öffnen → Teilen → „Zum Home-Bildschirm“.
 2. PC: Adresse in Chrome oder Edge öffnen → „App installieren“ in der Adresszeile.
