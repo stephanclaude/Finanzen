@@ -1,37 +1,40 @@
-# Sammelkarten-Depot – eigenständige App
+# Finanzen – privates Finanz-Dashboard der Familie
 
-Stand: 10.10.2026
+Stand: 12.10.2026
 
-Das ist Stephans bisheriges Sammelkarten-Depot (vorher als Claude-Artifact mit Claude-Datenbank) als eigenständige Web-App.
-Aussehen, Felder, Berechnungen, Wochenpflege, Cardmarket-Filter, Abgänge (verkauft / geöffnet / gedraftet) und Export sind unverändert übernommen.
+Eine eigenständige Web-App (PWA) für iPhone und PC. Alle Daten liegen nur auf dem Gerät (IndexedDB). Kein Konto, kein Server, keine KI. Hier im Repository liegt nur der Programmcode, nie Daten.
 
-## Was sich geändert hat
+## Aufbau in drei Ebenen
 
-- **Speicher:** Die Daten liegen lokal auf dem Gerät (IndexedDB) statt in der Claude-Datenbank. Kein Konto, kein Server, keine KI.
-- **Backup importieren:** neu im Tab „Neu“ → Sicherung. Liest das bisherige JSON-Backup (`Sammelkarten-Depot JJJJ-MM-TT.json`) ein und ersetzt die Daten auf dem Gerät.
-- **Export:** JSON enthält jetzt zusätzlich die Cardmarket-Filtereinstellungen. Auf dem iPhone öffnet sich das Teilen-Menü („In Dateien sichern“).
-- **Offline:** Ein Service Worker hält die App auch ohne Internet bereit.
-- **Installierbar:** Manifest und Icons für „Zum Home-Bildschirm“ (iPhone) und „App installieren“ (Chrome/Edge am PC).
+1. **Dashboard:** zwei Verläufe, **Vermögen** (Summe aller Vermögensbausteine) und **Laufende Kosten** (Summe pro Monat). Darunter Hinweise, z. B. bald fällige Kündigungstermine.
+2. **Bereich:** alle Bausteine eines Bereichs mit Wert, Anteil und gemeinsamem Verlauf, z. B. ETF-Depot, Konten, Altersvorsorge oder Versicherungen, Abos, Handy.
+3. **Baustein:** die einzelnen Positionen, z. B. jede ETF-Position oder jede Versicherung.
+
+Jeder Baustein entsteht aus einer **Vorlage**. Eine Vorlage gehört zu einem Bereich und weiß, was eine Position an einem Stichtag wert ist bzw. kostet. Daraus rechnet die App alle Summen und Verläufe nach oben. Neue Tracker werden als weitere Vorlage eingehängt (`VORLAGEN` in `index.html`).
+
+Vorhandene Vorlagen:
+
+| Vorlage | Bereich | Für |
+|---|---|---|
+| Stand-Verlauf | Vermögen | Konten, Depots, Vorsorge: ab und zu den Stand eintragen |
+| Kostenliste | Laufende Kosten | Verträge mit Betrag und Zahlungsintervall, Beginn, Ende, Kündigungstermin |
+
+Weitere Funktionen: Familienmitglieder mit Filter „wem gehört's“, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON (Export/Import), Beispieldaten zum Ausprobieren.
 
 ## Dateien
 
 | Datei | Zweck |
 |---|---|
-| index.html | die komplette App |
+| index.html | das Dashboard (komplette App) |
 | sw.js | Offline-Cache |
 | manifest.webmanifest, icon*.png, icon.svg | Installation als App |
+| tcg/ | das Sammelkarten-Depot, unverändert; wird als Baustein unter Vermögen eingebunden |
 
 ## Installation
 
-Die App liegt auf GitHub Pages: https://stephanclaude.github.io/TCG-depot/ Dort liegt nur der Programmcode, nie die Depotdaten.
+Die App liegt auf GitHub Pages unter `https://stephanclaude.github.io/<Repository-Name>/`.
 
 1. iPhone: Adresse in Safari öffnen → Teilen → „Zum Home-Bildschirm“.
 2. PC: Adresse in Chrome oder Edge öffnen → „App installieren“ in der Adresszeile.
-3. In der App: Neu → Sicherung → „Backup importieren“ → letztes JSON-Backup wählen.
 
-iPhone und PC haben jeweils eigene Daten. Abgleich: auf einem Gerät exportieren, auf dem anderen importieren (z. B. über iCloud Drive).
-
-## Später: Finanz-Dashboard
-
-Die Positionen bleiben im bisherigen Format (`kat`, `spiel`, `gruppe`, `einstand`, `menge`, `preise{datum: wert}`, `status`).
-Das Dashboard kann daraus Depotwert und Einsatz übernehmen.
+iPhone und PC haben jeweils eigene Daten. Abgleich: Einstellungen → Backup exportieren, auf dem anderen Gerät importieren (z. B. über iCloud Drive).

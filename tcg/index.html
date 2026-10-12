@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sammelkarten-Depot</title>
+<meta name="description" content="Privates Sammelkarten-Depot: Bestand, Einsatz, Marktwert und Wochenpflege der Preise.">
+<meta name="theme-color" content="#2F45A3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Depot">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ein schmaler Depot-Auszug – Kopf mit Gesamtwert und Kurve, darunter aufklappbare Kategorien; Wochenpflege als Abhak-Liste */
+:root {
+  --bg: #EDEFF2;
+  --surface: #FFFFFF;
+  --sunk: #E3E7EC;
+  --ink: #16202A;
+  --muted: #5B6875;
+  --line: #D3D9E0;
+  --accent: #2F45A3;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DFE4F7;
+  --gain: #1C7349;
+  --loss: #B0363A;
+  --warn: #9A600C;
+  --g-magic: #A85A1C;
+  --g-pokemon: #9C7C00;
+  --g-sorcery: #6A4BA6;
+  --g-lorcana: #1B7684;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151B; --surface: #19212A; --sunk: #141A21; --ink: #E4E9EE; --muted: #93A0AD; --line: #2A333D;
+    --accent: #93A5F0; --accent-ink: #10151B; --accent-soft: #232D4D;
+    --gain: #5CC490; --loss: #EF7E7E; --warn: #E2A94E;
+    --g-magic: #E39557; --g-pokemon: #E3C64A; --g-sorcery: #B39AE8; --g-lorcana: #5FC3D1;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151B; --surface: #19212A; --sunk: #141A21; --ink: #E4E9EE; --muted: #93A0AD; --line: #2A333D;
+  --accent: #93A5F0; --accent-ink: #10151B; --accent-soft: #232D4D;
+  --gain: #5CC490; --loss: #EF7E7E; --warn: #E2A94E;
+  --g-magic: #E39557; --g-pokemon: #E3C64A; --g-sorcery: #B39AE8; --g-lorcana: #5FC3D1;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; padding-block: 12px 64px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.gain { color: var(--gain); } .loss { color: var(--loss); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+/* Kopf + Navigation */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-block: 6px 14px; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font-size: 1.35rem; }
+.conn { font-size: 12px; color: var(--muted); }
+.tabs { display: flex; gap: 4px; background: var(--sunk); padding: 4px; border-radius: 999px; }
+.tabs button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-weight: 500; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+.badge { background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 600; border-radius: 999px; padding: 0 7px; line-height: 18px; }
+
+/* Spiel-Filter */
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.Magic { background: var(--g-magic); } .dot.Pokemon { background: var(--g-pokemon); }
+.dot.Sorcery { background: var(--g-sorcery); } .dot.Lorcana { background: var(--g-lorcana); }
+
+/* Depot-Kopf */
+.hero { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; }
+.hero-figs { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: flex-end; }
+.big { font-family: var(--font-display); font-size: clamp(2rem, 7vw, 2.8rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.lab { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.fig { display: grid; gap: 2px; }
+.fig .v { font-family: var(--font-num); font-size: 1.05rem; }
+.chart { width: 100%; min-height: 180px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--accent); vertical-align: middle; margin-right: 6px; }
+.legend i.dash { border-top: 2px dashed var(--muted); }
+
+/* Kategorien */
+.cats { display: grid; gap: 10px; margin-top: 16px; }
+.cat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.cat-head { width: 100%; border: 0; background: transparent; text-align: left; padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: baseline; }
+.cat-head h2 { font-size: 1.15rem; display: flex; gap: 8px; align-items: baseline; }
+.cat-head h2 .cnt { font-family: var(--font-body); font-size: 12px; color: var(--muted); font-weight: 500; }
+.cat-head .sum { font-family: var(--font-num); font-size: 1.15rem; text-align: right; }
+.cat-head .sub { font-size: 13px; color: var(--muted); }
+.cat-head .sub2 { font-size: 13px; text-align: right; font-family: var(--font-num); }
+.chev { display: inline-block; transition: transform .15s; color: var(--muted); font-size: 12px; }
+.cat[data-open="true"] .chev { transform: rotate(90deg); }
+.grp { padding: 4px 16px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; background: var(--sunk); border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+.grp .num { letter-spacing: 0; text-transform: none; }
+.row { width: 100%; border: 0; border-top: 1px solid var(--line); background: transparent; text-align: left; padding: 10px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
+.row:hover { background: var(--sunk); }
+.row .name { font-weight: 500; min-width: 0; overflow-wrap: anywhere; display: flex; gap: 8px; align-items: center; }
+.row .val { font-family: var(--font-num); text-align: right; }
+.row .meta { font-size: 12px; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.row .pl { font-family: var(--font-num); font-size: 12px; text-align: right; }
+.empty { padding: 28px 18px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--r); }
+.stale { color: var(--warn); }
+
+/* Wochenpflege */
+.pf-head { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; }
+.bar { height: 8px; border-radius: 99px; background: var(--sunk); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.pf-list { display: grid; gap: 8px; margin-top: 12px; }
+.pf { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 8px; }
+.pf .t { font-weight: 500; display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+.pf .info { font-size: 12px; color: var(--muted); display: flex; gap: 6px 12px; flex-wrap: wrap; }
+.flt { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.flt span { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; font-family: var(--font-num); color: var(--muted); }
+.pf .act { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 500; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 6px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.link { color: var(--accent); }
+.btn.danger { color: var(--loss); }
+.btn:disabled { opacity: .5; cursor: default; }
+.price-in { width: 7.5em; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 10px; font-family: var(--font-num); text-align: right; }
+.done-list { margin-top: 18px; }
+.done-list summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.done-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.done-row span:first-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* Formulare + Detail-Blatt */
+.form { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.field input, .field select, .field textarea { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+.field textarea { min-height: 64px; resize: vertical; }
+.hint { font-size: 12px; color: var(--muted); }
+.sheet-bg { position: fixed; inset: 0; background: rgb(10 14 20 / .45); z-index: 10; display: flex; justify-content: center; align-items: flex-end; }
+.sheet { background: var(--bg); width: 100%; max-width: 640px; max-height: 92%; overflow: auto; border-radius: 14px 14px 0 0; padding: 18px 16px calc(24px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
+@media (min-width: 700px) { .sheet-bg { align-items: center; } .sheet { border-radius: 14px; } }
+.sheet-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.sheet-top h2 { font-size: 1.3rem; overflow-wrap: anywhere; }
+.x { border: 0; background: var(--sunk); border-radius: 50%; width: 32px; height: 32px; flex: none; font-size: 18px; line-height: 1; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.hist { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.hist-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 14px; border-top: 1px solid var(--line); font-size: 14px; }
+.hist-row:first-child { border-top: 0; }
+.hist-row button { border: 0; background: transparent; color: var(--muted); font-size: 12px; }
+.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.sold { margin-top: 16px; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); }
+.section-t { font-size: 1.05rem; margin: 22px 0 8px; }
+@media (max-width: 520px) { .tabs button { padding: 6px 10px; } .brand .conn { display: none; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Sammelkarten-Depot</h1><span class="conn" id="conn">lädt …</span></div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-depot" data-tab="depot" aria-selected="true">Depot</button>
+      <button role="tab" id="tab-pflege" data-tab="pflege" aria-selected="false">Wochenpflege <span class="badge" id="due-badge" hidden>0</span></button>
+      <button role="tab" id="tab-neu" data-tab="neu" aria-selected="false">Neu</button>
+    </nav>
+  </header>
+  <div class="filters" id="filters"></div>
+  <main id="view">
+    <div class="empty">Depot wird geladen …</div>
+  </main>
+</div>
+<div id="sheet-root"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+// Lokaler Speicher statt Claude-Datenbank: alle Daten bleiben in IndexedDB auf diesem Gerät.
+(() => {
+  const DBNAME = 'sammelkarten-depot';
+  let idb = null, cache = { positionen: {}, einstellungen: {} };
+  const listeners = { positionen: [], docs: {} };
+  const openIdb = () => new Promise(res => {
+    try {
+      const r = indexedDB.open(DBNAME, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => res(null);
+    } catch { res(null); }
+  });
+  const idbGet = k => new Promise(res => { if (!idb) return res(null); try { const t = idb.transaction('kv').objectStore('kv').get(k); t.onsuccess = () => res(t.result ?? null); t.onerror = () => res(null); } catch { res(null); } });
+  const persist = () => new Promise((res, rej) => {
+    if (!idb) { try { localStorage.setItem(DBNAME, JSON.stringify(cache)); return res(); } catch (e) { return rej({ code: 'quota_exceeded' }); } }
+    const tx = idb.transaction('kv', 'readwrite'); tx.objectStore('kv').put(cache, 'state');
+    tx.oncomplete = () => res(); tx.onerror = () => rej({ code: tx.error?.name === 'QuotaExceededError' ? 'quota_exceeded' : 'failed' });
+  });
+  const clone = o => JSON.parse(JSON.stringify(o));
+  // Zusammenführen wie bei der bisherigen Datenbank: verschachtelte Objekte werden gemischt, null entfernt ein Feld
+  function merge(t, patch) {
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null) delete t[k];
+      else if (typeof v === 'object' && !Array.isArray(v) && typeof t[k] === 'object' && t[k] && !Array.isArray(t[k])) merge(t[k], v);
+      else t[k] = clone(v);
+    }
+    return t;
+  }
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  const emitCol = () => { const snap = { docs: Object.entries(cache.positionen).map(([id, d]) => ({ id, data: () => clone(d) })) }; listeners.positionen.forEach(cb => cb(snap)); };
+  const emitDoc = path => { const d = cache.einstellungen[path]; (listeners.docs[path] || []).forEach(cb => cb({ exists: !!d, data: () => d ? clone(d) : undefined })); };
+  async function commit(fn) { const before = clone(cache); fn(); try { await persist(); } catch (e) { cache = before; throw e; } }
+
+  const db = {
+    collection(name) {
+      return {
+        doc: id => ({
+          update: patch => commit(() => { const d = cache.positionen[id]; if (!d) throw { code: 'not_found' }; merge(d, patch); }).then(emitCol),
+          set: data => commit(() => { cache.positionen[id] = clone(data); }).then(emitCol),
+          delete: () => commit(() => { delete cache.positionen[id]; }).then(emitCol),
+        }),
+        add: data => { const id = uid(); return commit(() => { cache.positionen[id] = clone(data); }).then(() => { emitCol(); return { id }; }); },
+        onSnapshot(cb) { listeners.positionen.push(cb); setTimeout(emitCol, 0); return () => {}; },
+      };
+    },
+    doc(path) {
+      return {
+        set: data => commit(() => { cache.einstellungen[path] = clone(data); }).then(() => emitDoc(path)),
+        onSnapshot(cb) { (listeners.docs[path] ||= []).push(cb); setTimeout(() => emitDoc(path), 0); return () => {}; },
+      };
+    },
+  };
+
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const downloads = {
+    async save({ filename, data }) {
+      const type = filename.endsWith('.csv') ? 'text/csv' : 'application/json';
+      const file = new File([data], filename, { type });
+      // iPhone: Teilen-Menü, darin "In Dateien sichern" (z. B. iCloud Drive)
+      if (isIOS && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; } catch (e) { if (e?.name === 'AbortError') throw { code: 'declined' }; }
+      }
+      const url = URL.createObjectURL(file); const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    },
+  };
+
+  // Backup einlesen (gleiches Format wie der JSON-Export: { exportiert, positionen: [...] })
+  window.depotImport = {
+    parse(text) {
+      const d = JSON.parse(text);
+      const list = Array.isArray(d) ? d : d?.positionen;
+      if (!Array.isArray(list) || list.some(p => !p || typeof p.name !== 'string')) throw new Error('format');
+      return { datum: d.exportiert || null, positionen: list, einstellungen: d.einstellungen || null };
+    },
+    async replace(b) {
+      await commit(() => {
+        cache.positionen = {};
+        for (const p of b.positionen) { const { id, ...rest } = p; cache.positionen[id || uid()] = clone(rest); }
+        if (b.einstellungen) cache.einstellungen = clone(b.einstellungen);
+      });
+      emitCol(); Object.keys(cache.einstellungen).forEach(emitDoc);
+    },
+    einstellungen: () => clone(cache.einstellungen),
+  };
+
+  window.claude = {
+    async use(name) {
+      if (name === 'downloads') return downloads;
+      if (name !== 'db') return null;
+      if (!idb) {
+        idb = await openIdb();
+        const s = await idbGet('state') ?? (() => { try { return JSON.parse(localStorage.getItem(DBNAME) || 'null'); } catch { return null; } })();
+        if (s && s.positionen) cache = { positionen: s.positionen, einstellungen: s.einstellungen || {} };
+        try { navigator.storage?.persist?.(); } catch {}
+      }
+      return db;
+    },
+  };
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+<script>
+(() => {
+  const GAMES = ['Magic', 'Pokemon', 'Sorcery', 'Lorcana'];
+  const GAME_LABEL = { Magic: 'Magic', Pokemon: 'Pokémon', Sorcery: 'Sorcery', Lorcana: 'Lorcana' };
+  const CATS = [
+    { key: 'sealed', label: 'Sealed' },
+    { key: 'single', label: 'Singles' },
+    { key: 'collection', label: 'Collections' },
+  ];
+  const eur = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR' });
+  const eur0 = new Intl.NumberFormat('de-AT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  const pct = new Intl.NumberFormat('de-AT', { style: 'percent', maximumFractionDigits: 1, signDisplay: 'exceptZero' });
+  const dFmt = new Intl.DateTimeFormat('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const mFmt = new Intl.DateTimeFormat('de-AT', { month: 'short', year: '2-digit' });
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('sd.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('sd.' + k, JSON.stringify(v)); } catch {} },
+  };
+
+  const S = {
+    db: null, downloads: null, positions: [], loaded: false,
+    tab: store.get('tab', 'depot'), game: store.get('game', 'alle'),
+    open: new Set(store.get('open', [])), detail: null, pendingRender: false, confirmDelete: false,
+    linkCfg: { sprachen: '1,3', laender: '' },
+  };
+
+  // ---------- Hilfsfunktionen ----------
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const parseIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const today = () => iso(new Date());
+  const fmtD = s => s ? dFmt.format(parseIso(s)) : '–';
+  const num = v => { if (v == null) return NaN; const s = String(v).trim().replace(/\s|€/g, ''); if (!s) return NaN; const n = s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s; return Number(n); };
+  const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '') + eur.format(Math.abs(n));
+  const cls = n => n > 0.005 ? 'gain' : n < -0.005 ? 'loss' : 'muted';
+
+  const entries = p => Object.entries(p.preise || {}).filter(([, v]) => typeof v === 'number' && isFinite(v)).sort((a, b) => a[0] < b[0] ? -1 : 1);
+  const lastAt = (p, upto) => { let r = null; for (const [d, v] of entries(p)) { if (!upto || d <= upto) r = { d, v }; } return r; };
+  const firstEntry = p => { const e = entries(p); return e.length ? { d: e[0][0], v: e[0][1] } : null; };
+  const qty = p => (typeof p.menge === 'number' && p.menge > 0) ? p.menge : 1;
+  const cost = p => { const e = typeof p.einstand === 'number' ? p.einstand : (firstEntry(p)?.v ?? 0); return e * qty(p); };
+  const value = p => { const l = lastAt(p); return l ? l.v * qty(p) : 0; };
+  // Abgänge: verkauft (Erlös) oder geöffnet (Erlös 0, Einsatz ist im Sealed-Bereich verloren)
+  // gedraftet: für einen Draft geöffnet, Beiträge der Mitspieler zählen als Erlös. Verkäufe stehen in den Abgängen, zählen aber nicht zur Bilanz.
+  const GONE = { verkauft: 'verkauft', geoeffnet: 'geöffnet', gedraftet: 'gedraftet' };
+  const isOpened = p => p.status === 'geoeffnet';
+  const isDrafted = p => p.status === 'gedraftet';
+  const isSale = p => p.status === 'verkauft';
+  const isSold = p => !!GONE[p.status];
+  // Vorerst zählt kein Abgang zur Bilanz: das Depot erfasst nur den Bestand; Abgänge stehen zur Nachverfolgung mit ihrem G/V da
+  const inBilanz = () => false;
+  const proceeds = p => isOpened(p) ? 0 : isDrafted(p) ? (p.gedraftet?.erloes ?? 0) : (p.verkauf?.preis ?? 0);
+  const goneDate = p => (isOpened(p) ? p.geoeffnet?.datum : isDrafted(p) ? p.gedraftet?.datum : p.verkauf?.datum) || null;
+  const goneBy = (p, d) => { if (!isSold(p)) return false; const g = goneDate(p); if (g) return g <= d; const l = lastAt(p); return !l || d > l.d; };
+  const gameOk = p => S.game === 'alle' || p.spiel === S.game;
+
+  function monday(d = new Date()) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); return iso(x); }
+  function monthStart(d = new Date()) { return iso(new Date(d.getFullYear(), d.getMonth(), 1)); }
+  const periodStart = p => p.intervall === 'monat' ? monthStart() : monday();
+  const isDue = p => !isSold(p) && (!lastAt(p) || lastAt(p).d < periodStart(p));
+
+  // Einheitliche Cardmarket-Filter: Sprache und Verkäuferländer werden beim Öffnen auf die Einstellung gesetzt (gespeicherte Links bleiben unverändert)
+  const LANGS = [['1', 'EN'], ['3', 'DE'], ['2', 'FR'], ['5', 'IT'], ['4', 'ES'], ['7', 'JP']];
+  function effLink(url) {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      if (!u.hostname.includes('cardmarket.com')) return url;
+      const c = S.linkCfg;
+      if (c.sprachen) u.searchParams.set('language', c.sprachen); else u.searchParams.delete('language');
+      if (c.laender) u.searchParams.set('sellerCountry', c.laender); else u.searchParams.delete('sellerCountry');
+      return u.toString().replace(/%2C/g, ',');
+    } catch { return url; }
+  }
+  function filtersFromLink(url) {
+    url = effLink(url);
+    const out = [];
+    try {
+      const u = new URL(url);
+      const q = u.searchParams;
+      if (u.hostname.includes('ebay')) out.push('eBay');
+      const lang = q.get('language');
+      if (lang) out.push(lang.split(',').map(x => ({ 1: 'EN', 2: 'FR', 3: 'DE', 4: 'ES', 5: 'IT', 7: 'JP' }[x] || x)).join('/'));
+      const mc = q.get('minCondition');
+      if (mc) out.push('ab ' + ({ 1: 'MT', 2: 'NM', 3: 'EX', 4: 'GD', 5: 'LP', 6: 'PL', 7: 'PO' }[mc] || mc));
+      const sc = q.get('sellerCountry');
+      if (sc) { const l = sc.split(','); out.push(l.length > 2 ? l.length + ' Länder' : l.map(x => ({ 1: 'AT', 7: 'DE' }[x] || '#' + x)).join('/')); }
+      else if (u.hostname.includes('cardmarket')) out.push('alle Länder');
+      if (q.get('isFoil') === 'Y') out.push('Foil');
+    } catch {}
+    return out;
+  }
+
+  // Wertverlauf: pro Woche (Sonntag) der Wert aller Positionen, die zu dem Zeitpunkt schon einen Preis hatten
+  function series(list) {
+    const dates = new Set();
+    const t = today();
+    for (const p of list) for (const [d] of entries(p)) {
+      const x = parseIso(d); x.setDate(x.getDate() + ((7 - x.getDay()) % 7));
+      const s = iso(x); dates.add(s > t ? t : s);
+    }
+    return [...dates].sort().map(d => {
+      let wert = 0, einsatz = 0, n = 0;
+      for (const p of list) {
+        const l = lastAt(p, d); if (!l) continue;
+        if (goneBy(p, d)) continue;
+        wert += l.v * qty(p); einsatz += cost(p); n++;
+      }
+      return { d, wert, einsatz, n };
+    }).filter(x => x.n > 0);
+  }
+
+  // ---------- Darstellung ----------
+  const view = document.getElementById('view');
+  function render() {
+    const ae = document.activeElement;
+    if (ae && view.contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && ae.value) { S.pendingRender = true; return; }
+    S.pendingRender = false;
+    renderTabs(); renderFilters();
+    if (!S.loaded) return;
+    if (S.tab === 'depot') renderDepot();
+    else if (S.tab === 'pflege') renderPflege();
+    else renderNeu();
+  }
+  view.addEventListener('focusout', () => setTimeout(() => { if (S.pendingRender) render(); }, 0));
+
+  function renderTabs() {
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === S.tab)));
+    const due = S.positions.filter(isDue).length;
+    const badge = document.getElementById('due-badge');
+    badge.hidden = !S.loaded || due === 0; badge.textContent = due;
+  }
+  function renderFilters() {
+    const el = document.getElementById('filters');
+    el.hidden = S.tab === 'neu';
+    const present = GAMES.filter(g => S.positions.some(p => p.spiel === g));
+    el.innerHTML = [`<button class="chip" data-game="alle" aria-pressed="${S.game === 'alle'}">Alle Spiele</button>`]
+      .concat(present.map(g => `<button class="chip" data-game="${g}" aria-pressed="${S.game === g}"><span class="dot ${g}"></span>${GAME_LABEL[g]}</button>`)).join('');
+  }
+
+  function plText(gain, base) { return `<span class="${cls(gain)}">${signed(gain)}${base > 0 ? ' · ' + pct.format(gain / base) : ''}</span>`; }
+
+  function renderDepot() {
+    const all = S.positions.filter(gameOk);
+    if (!S.positions.length) {
+      view.innerHTML = `<div class="empty"><h2 style="font-size:1.1rem;margin-bottom:6px">Noch keine Positionen</h2>Lege unter <b>Neu</b> dein erstes Produkt an. Danach erscheinen hier Gesamtwert, Wertkurve und die Kategorien Sealed, Singles und Collections.</div>`;
+      return;
+    }
+    const held = all.filter(p => !isSold(p));
+    const wert = held.reduce((s, p) => s + value(p), 0);
+    const einsatz = held.reduce((s, p) => s + cost(p), 0);
+    const ser = series(all);
+    const prev = ser.length > 1 ? ser[ser.length - 2] : null;
+    const lastD = held.map(p => lastAt(p)?.d).filter(Boolean).sort().pop();
+    const sold = all.filter(isSold);
+    const realizedOf = ps => ps.reduce((s, p) => s + (proceeds(p) - cost(p)), 0);
+    const realized = realizedOf(sold.filter(inBilanz));
+
+    let h = `<section class="hero">
+      <div class="hero-figs">
+        <div class="fig"><span class="lab">Depotwert</span><span class="big">${eur.format(wert)}</span></div>
+        <div class="fig"><span class="lab">Einsatz</span><span class="v">${eur.format(einsatz)}</span></div>
+        <div class="fig"><span class="lab">G/V offen</span><span class="v">${plText(wert - einsatz, einsatz)}</span></div>
+        ${sold.some(inBilanz) ? `<div class="fig"><span class="lab">G/V realisiert</span><span class="v">${plText(realized, 0)}</span></div>` : ''}
+        ${prev ? `<div class="fig"><span class="lab">seit ${fmtD(prev.d)}</span><span class="v">${plText(wert - prev.wert, prev.wert)}</span></div>` : ''}
+      </div>
+      <div class="chart" id="chart"></div>
+      <div class="legend"><span><i></i>Marktwert</span><span><i class="dash"></i>Einsatz</span><span>Letzter Preis: ${fmtD(lastD)}</span></div>
+    </section><div class="cats">`;
+
+    for (const c of CATS) {
+      const items = held.filter(p => p.kat === c.key);
+      const w = items.reduce((s, p) => s + value(p), 0), e = items.reduce((s, p) => s + cost(p), 0);
+      const open = S.open.has(c.key);
+      h += `<section class="cat" data-open="${open}">
+        <button class="cat-head" data-cat="${c.key}" aria-expanded="${open}">
+          <h2><span class="chev">▶</span>${c.label} <span class="cnt">${items.length} ${items.length === 1 ? 'Position' : 'Positionen'}</span></h2>
+          <span class="sum">${eur.format(w)}</span>
+          <span class="sub">Einsatz ${eur.format(e)}</span>
+          <span class="sub2">${plText(w - e, e)}</span>
+          ${(() => { const g = sold.filter(p => p.kat === c.key); if (!g.length) return '';
+            const parts = Object.entries(GONE).map(([k, l]) => { const n = g.filter(p => p.status === k).length; return n ? `${n} ${l}` : ''; }).filter(Boolean).join(', ');
+            const b = g.filter(inBilanz);
+            return `<span class="sub">Abgänge: ${parts}</span><span class="sub2">${b.length ? 'realisiert ' + plText(realizedOf(b), 0) : ''}</span>`; })()}
+        </button>`;
+      if (open) {
+        if (!items.length) h += `<div class="row" style="cursor:default"><span class="meta">Noch nichts erfasst.</span></div>`;
+        const groups = new Map();
+        for (const p of items) { const g = p.gruppe || GAME_LABEL[p.spiel] || 'Sonstige'; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(p); }
+        for (const [g, ps] of groups) {
+          ps.sort((a, b) => value(b) - value(a));
+          const gw = ps.reduce((s, p) => s + value(p), 0);
+          if (groups.size > 1) h += `<div class="grp"><span>${esc(g)}</span><span class="num">${eur0.format(gw)}</span></div>`;
+          for (const p of ps) h += rowHtml(p);
+        }
+      }
+      h += `</section>`;
+    }
+    h += `</div>`;
+
+    if (sold.length) {
+      h += `<h3 class="section-t">Abgänge <span class="muted" style="font-size:.85rem;font-weight:400">zur Nachverfolgung, nicht in der Bilanz</span></h3><section class="cat">`;
+      for (const [k, label] of [['gedraftet', 'Gedraftet'], ['geoeffnet', 'Geöffnet'], ['verkauft', 'Verkauft']]) {
+        const ps = sold.filter(p => p.status === k);
+        if (!ps.length) continue;
+        h += `<div class="grp" style="border-top:0"><span>${label}</span><span class="num">${plText(realizedOf(ps), 0)}</span></div>`;
+        for (const p of ps.sort((a, b) => (goneDate(b) || '').localeCompare(goneDate(a) || '') || a.name.localeCompare(b.name))) {
+          const g = proceeds(p) - cost(p);
+          const when = goneDate(p) ? fmtD(goneDate(p)) : 'Datum unbekannt';
+          h += `<button class="row" data-id="${esc(p.id)}"><span class="name"><span class="dot ${esc(p.spiel)}"></span>${esc(p.name)}</span><span class="val">${isOpened(p) ? 'geöffnet' : eur.format(proceeds(p))}</span>
+            <span class="meta">${GONE[k]} ${when} · Einsatz ${eur.format(cost(p))}</span><span class="pl">${plText(g, cost(p))}</span></button>`;
+        }
+      }
+      h += `</section>`;
+    }
+    view.innerHTML = h;
+    drawChart(document.getElementById('chart'), ser);
+  }
+
+  function rowHtml(p) {
+    const l = lastAt(p), w = value(p), e = cost(p);
+    const stale = isDue(p);
+    const meta = [p.details, qty(p) > 1 ? qty(p) + ' Stück' : '', l ? `Stand ${fmtD(l.d)}` : 'noch kein Preis'].filter(Boolean).map(esc).join(' · ');
+    return `<button class="row" data-id="${esc(p.id)}">
+      <span class="name"><span class="dot ${esc(p.spiel)}" title="${esc(GAME_LABEL[p.spiel] || '')}"></span>${esc(p.name)}</span>
+      <span class="val">${eur.format(w)}</span>
+      <span class="meta${stale ? ' stale' : ''}">${meta}${stale ? ' · fällig' : ''}</span>
+      <span class="pl">${plText(w - e, e)}</span>
+    </button>`;
+  }
+
+  function drawChart(el, ser) {
+    if (!el) return;
+    if (ser.length < 2) { el.innerHTML = `<div class="hint" style="padding:20px 0">Die Wertkurve erscheint ab zwei Preisständen in unterschiedlichen Wochen.</div>`; return; }
+    const W = Math.max(300, Math.round(el.clientWidth || 600)), H = W < 500 ? 190 : 230;
+    const L = 58, R = 14, T = 12, B = 26;
+    const xs = ser.map(p => parseIso(p.d).getTime());
+    const x0 = xs[0], x1 = xs[xs.length - 1];
+    const vals = ser.flatMap(p => [p.wert, p.einsatz]);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const span = hi - lo || hi || 1;
+    const stepRaw = span / 4, mag = Math.pow(10, Math.floor(Math.log10(stepRaw)));
+    const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= stepRaw);
+    lo = Math.floor((lo - span * 0.05) / step) * step; hi = Math.ceil((hi + span * 0.05) / step) * step;
+    if (lo < 0) lo = 0;
+    const X = t => L + (t - x0) / ((x1 - x0) || 1) * (W - L - R);
+    const Y = v => T + (1 - (v - lo) / ((hi - lo) || 1)) * (H - T - B);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Wertverlauf des Depots">`;
+    for (let v = lo; v <= hi + 1e-9; v += step) {
+      s += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/>`;
+      s += `<text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--font-num)">${eur0.format(v)}</text>`;
+    }
+    const nLab = Math.min(ser.length, W < 500 ? 3 : 5);
+    const used = new Set();
+    for (let i = 0; i < nLab; i++) {
+      const k = Math.round(i * (ser.length - 1) / (nLab - 1));
+      if (used.has(k)) continue; used.add(k);
+      const anchor = k === 0 ? 'start' : k === ser.length - 1 ? 'end' : 'middle';
+      s += `<text x="${X(xs[k])}" y="${H - 6}" text-anchor="${anchor}" font-size="11" fill="var(--muted)" font-family="var(--font-body)">${mFmt.format(new Date(xs[k]))}</text>`;
+    }
+    const line = key => ser.map((p, i) => `${i ? 'L' : 'M'}${X(xs[i]).toFixed(1)},${Y(p[key]).toFixed(1)}`).join('');
+    const area = line('wert') + `L${X(x1)},${Y(lo)}L${X(x0)},${Y(lo)}Z`;
+    s += `<path d="${area}" fill="var(--accent)" fill-opacity="0.12" stroke="none"/>`;
+    s += `<path d="${line('einsatz')}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+    s += `<path d="${line('wert')}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>`;
+    ser.forEach((p, i) => { s += `<circle cx="${X(xs[i])}" cy="${Y(p.wert)}" r="${i === ser.length - 1 ? 4.5 : 2.5}" fill="var(--accent)"><title>${fmtD(p.d)}: ${eur.format(p.wert)} (Einsatz ${eur.format(p.einsatz)})</title></circle>`; });
+    s += `</svg>`;
+    el.innerHTML = s;
+  }
+
+  function renderPflege() {
+    const act = S.positions.filter(p => !isSold(p) && gameOk(p));
+    const due = act.filter(isDue);
+    const weekly = act.filter(p => p.intervall !== 'monat'), monthly = act.filter(p => p.intervall === 'monat');
+    const wDone = weekly.filter(p => !isDue(p)).length, mDone = monthly.filter(p => !isDue(p)).length;
+    const total = act.length, done = total - due.length;
+    let h = `<section class="pf-head">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline">
+        <h2 style="font-size:1.2rem">${due.length ? `Noch ${due.length} ${due.length === 1 ? 'Preis' : 'Preise'} offen` : 'Alles aktuell'}</h2>
+        <span class="num muted">${done}/${total}</span>
+      </div>
+      <div class="bar"><span style="width:${total ? done / total * 100 : 0}%"></span></div>
+      <div class="hint">Woche ab ${fmtD(monday())}: ${wDone}/${weekly.length} · Monat ${new Intl.DateTimeFormat('de-AT', { month: 'long' }).format(new Date())}: ${mDone}/${monthly.length}. Link öffnen, Ab-Preis pro Stück eintragen, Enter drückt Speichern.</div>
+    </section><div class="pf-list">`;
+    if (!due.length) h += `<div class="empty">Für diesen Zeitraum ist alles eingetragen. Die nächste Runde beginnt am Montag.</div>`;
+    due.sort((a, b) => (a.intervall === 'monat') - (b.intervall === 'monat') || CATS.findIndex(c => c.key === a.kat) - CATS.findIndex(c => c.key === b.kat) || (a.gruppe || '').localeCompare(b.gruppe || '') || a.name.localeCompare(b.name));
+    for (const p of due) {
+      const l = lastAt(p);
+      const f = p.link ? filtersFromLink(p.link) : [];
+      h += `<article class="pf" data-id="${esc(p.id)}">
+        <div class="t"><span class="dot ${esc(p.spiel)}"></span>${esc(p.name)}</div>
+        <div class="info"><span>${esc(CATS.find(c => c.key === p.kat)?.label || '')}${p.intervall === 'monat' ? ' · monatlich' : ''}${p.details ? ' · ' + esc(p.details) : ''}</span>
+          <span>zuletzt <b class="num">${l ? eur.format(l.v) : '–'}</b> am ${fmtD(l?.d)}</span>
+          ${f.length ? `<span class="flt">${f.map(x => `<span>${esc(x)}</span>`).join('')}</span>` : ''}</div>
+        <form class="act" data-save="${esc(p.id)}">
+          ${p.link ? `<a class="btn link" href="${esc(effLink(p.link))}" target="_blank" rel="noopener">${esc(p.quelle || 'Link')} öffnen ↗</a>` : `<span class="hint">kein Link hinterlegt</span>`}
+          <input class="price-in" id="in-${esc(p.id)}" inputmode="decimal" autocomplete="off" placeholder="€ / Stück" aria-label="Preis für ${esc(p.name)}">
+          <button class="btn primary" type="submit">Speichern</button>
+          ${l ? `<button class="btn" type="button" data-same="${esc(p.id)}" title="Letzten Preis für heute übernehmen">unverändert</button>` : ''}
+        </form>
+      </article>`;
+    }
+    h += `</div>`;
+    const doneList = act.filter(p => !isDue(p));
+    if (doneList.length) {
+      h += `<details class="done-list"><summary>${doneList.length} bereits erledigt</summary>`;
+      for (const p of doneList.sort((a, b) => a.name.localeCompare(b.name))) { const l = lastAt(p); h += `<div class="done-row"><span>${esc(p.name)}</span><span class="num">${eur.format(l.v)} · ${fmtD(l.d)}</span></div>`; }
+      h += `</details>`;
+    }
+    view.innerHTML = h;
+  }
+
+  function fieldsHtml(p = {}, prefix = 'f') {
+    const opt = (arr, cur) => arr.map(([v, l]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${l}</option>`).join('');
+    return `<div class="fgrid">
+      <div class="field" style="grid-column:1/-1"><label for="${prefix}-name">Name</label><input id="${prefix}-name" value="${esc(p.name)}" required></div>
+      <div class="field"><label for="${prefix}-kat">Kategorie</label><select id="${prefix}-kat">${opt(CATS.map(c => [c.key, c.label]), p.kat || 'sealed')}</select></div>
+      <div class="field"><label for="${prefix}-spiel">Spiel</label><select id="${prefix}-spiel">${opt(GAMES.map(g => [g, GAME_LABEL[g]]), p.spiel || 'Magic')}</select></div>
+      <div class="field"><label for="${prefix}-gruppe">Gruppe (optional)</label><input id="${prefix}-gruppe" value="${esc(p.gruppe)}" placeholder="z. B. Secret Lair" list="gruppen"></div>
+      <div class="field"><label for="${prefix}-details">Details</label><input id="${prefix}-details" value="${esc(p.details)}" placeholder="Sprache, Zustand, Foil …"></div>
+      <div class="field"><label for="${prefix}-menge">Menge</label><input id="${prefix}-menge" inputmode="numeric" value="${esc(p.menge ?? 1)}"></div>
+      <div class="field"><label for="${prefix}-einstand">Einstand pro Stück (€)</label><input id="${prefix}-einstand" inputmode="decimal" value="${typeof p.einstand === 'number' ? esc(String(p.einstand).replace('.', ',')) : ''}" placeholder="leer = erster Preis"></div>
+      <div class="field"><label for="${prefix}-intervall">Pflege</label><select id="${prefix}-intervall">${opt([['woche', 'wöchentlich'], ['monat', 'monatlich']], p.intervall || ((p.kat || 'sealed') === 'collection' ? 'monat' : 'woche'))}</select></div>
+      <div class="field"><label for="${prefix}-quelle">Preisquelle</label><select id="${prefix}-quelle">${opt([['Cardmarket', 'Cardmarket'], ['eBay', 'eBay'], ['Manabox', 'Manabox'], ['Sonstige', 'Sonstige']], p.quelle || 'Cardmarket')}</select></div>
+      <div class="field" style="grid-column:1/-1"><label for="${prefix}-link">Link (mit deinen Filtern)</label><input id="${prefix}-link" type="url" value="${esc(p.link)}" placeholder="https://www.cardmarket.com/de/…"></div>
+      <div class="field" style="grid-column:1/-1"><label for="${prefix}-notiz">Notiz</label><textarea id="${prefix}-notiz">${esc(p.notiz)}</textarea></div>
+    </div>
+    <datalist id="gruppen">${[...new Set(S.positions.map(x => x.gruppe).filter(Boolean))].map(g => `<option value="${esc(g)}">`).join('')}</datalist>`;
+  }
+  function readFields(prefix) {
+    const v = id => document.getElementById(`${prefix}-${id}`).value.trim();
+    const ein = num(v('einstand')), menge = num(v('menge'));
+    return {
+      name: v('name'), kat: v('kat'), spiel: v('spiel'), gruppe: v('gruppe'), details: v('details'),
+      menge: isFinite(menge) && menge > 0 ? menge : 1, einstand: isFinite(ein) ? ein : null,
+      intervall: v('intervall'), quelle: v('quelle'), link: v('link'), notiz: v('notiz'),
+    };
+  }
+
+  function renderNeu() {
+    view.innerHTML = `<form class="form" id="new-form">
+      <h2 style="font-size:1.2rem">Position anlegen</h2>
+      ${fieldsHtml({}, 'n')}
+      <div class="fgrid">
+        <div class="field"><label for="n-preis">Aktueller Preis pro Stück (€)</label><input id="n-preis" inputmode="decimal" placeholder="z. B. 129,90"></div>
+        <div class="field"><label for="n-datum">Stand vom</label><input id="n-datum" type="date" value="${today()}"></div>
+      </div>
+      <div class="hint">Ohne Einstand gilt der erste Preis als Einstand. Den echten Kaufpreis kannst du jederzeit nachtragen.</div>
+      <div class="inline"><button class="btn primary" type="submit">Anlegen</button></div>
+    </form>
+    <h3 class="section-t">Einheitliche Cardmarket-Filter</h3>
+    <form class="form" id="cfg-form">
+      <div class="hint">Gilt beim Öffnen für alle Cardmarket-Links. Zustand und Foil bleiben wie im jeweiligen Link.</div>
+      <fieldset style="border:0;padding:0;margin:0;display:flex;gap:6px 16px;flex-wrap:wrap"><legend class="hint" style="margin-bottom:6px">Sprachen</legend>
+        ${LANGS.map(([c, l]) => `<label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="cfg-l-${c}" value="${c}"${S.linkCfg.sprachen.split(',').includes(c) ? ' checked' : ''}>${l}</label>`).join('')}
+      </fieldset>
+      <div class="field"><label for="cfg-c">Verkäuferländer: Cardmarket-Link mit gesetztem Länderfilter einfügen (leer = alle Länder)</label>
+        <input id="cfg-c" type="text" autocomplete="off" placeholder="https://www.cardmarket.com/de/…?sellerCountry=…" value="${S.linkCfg.laender ? esc('sellerCountry=' + S.linkCfg.laender) : ''}"></div>
+      <div class="hint">Aktuell: ${S.linkCfg.laender ? S.linkCfg.laender.split(',').length + ' Länder' : 'alle Länder'}.</div>
+      <div class="inline"><button class="btn primary" type="submit">Filter speichern</button></div>
+    </form>
+    <h3 class="section-t">Sicherung</h3>
+    <div class="form"><div class="hint">Deine Daten liegen nur auf diesem Gerät. Exportiere regelmäßig ein JSON-Backup, z. B. nach iCloud Drive. Damit überträgst du das Depot auch zwischen iPhone und PC. CSV öffnet sich in Excel.</div>
+      <div class="inline"><button class="btn" id="exp-json" type="button">JSON exportieren</button><button class="btn" id="exp-csv" type="button">CSV exportieren</button><button class="btn" id="imp-btn" type="button">Backup importieren</button><input type="file" id="imp-file" accept=".json,application/json" hidden></div>
+      <div id="imp-confirm"></div></div>`;
+  }
+
+  // ---------- Detail-Blatt ----------
+  const sheetRoot = document.getElementById('sheet-root');
+  function openDetail(id) { S.detail = id; S.confirmDelete = false; renderSheet(); }
+  function closeDetail() { S.detail = null; sheetRoot.innerHTML = ''; }
+  function renderSheet() {
+    const p = S.positions.find(x => x.id === S.detail);
+    if (!p) { closeDetail(); return; }
+    const l = lastAt(p), w = value(p), e = cost(p);
+    const hist = entries(p).reverse();
+    const f = p.link ? filtersFromLink(p.link) : [];
+    sheetRoot.innerHTML = `<div class="sheet-bg" id="sheet-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">
+      <div class="sheet-top"><div><div class="lab"><span class="dot ${esc(p.spiel)}"></span> ${esc(GAME_LABEL[p.spiel] || '')} · ${esc(CATS.find(c => c.key === p.kat)?.label || '')}${isSold(p) ? ' · ' + GONE[p.status] : ''}</div><h2 id="sh-t">${esc(p.name)}</h2></div><button class="x" id="sh-close" aria-label="Schließen">×</button></div>
+      <div class="kv">
+        <div class="fig"><span class="lab">${isSold(p) ? 'Erlös' : 'Wert'}</span><span class="v num">${eur.format(isSold(p) ? proceeds(p) : w)}</span></div>
+        <div class="fig"><span class="lab">Einsatz</span><span class="v num">${eur.format(e)}</span></div>
+        <div class="fig"><span class="lab">${isSold(p) && !inBilanz(p) ? 'G/V (nicht in Bilanz)' : isSold(p) ? 'G/V realisiert' : 'G/V offen'}</span><span class="v num">${plText((isSold(p) ? proceeds(p) : w) - e, e)}</span></div>
+        <div class="fig"><span class="lab">Letzter Preis</span><span class="v num">${l ? eur.format(l.v) : '–'}</span><span class="hint">${fmtD(l?.d)}</span></div>
+      </div>
+      ${p.link ? `<div class="inline"><a class="btn link" href="${esc(effLink(p.link))}" target="_blank" rel="noopener">${esc(p.quelle || 'Link')} öffnen ↗</a>${f.length ? `<span class="flt">${f.map(x => `<span>${esc(x)}</span>`).join('')}</span>` : ''}</div>` : ''}
+      <div class="chart" id="sh-chart"></div>
+      <form class="inline" id="sh-addprice">
+        <div class="field"><label for="sh-p">Preis pro Stück (€)</label><input class="price-in" id="sh-p" inputmode="decimal"></div>
+        <div class="field"><label for="sh-d">Datum</label><input id="sh-d" type="date" value="${today()}"></div>
+        <button class="btn primary" type="submit">Preis eintragen</button>
+      </form>
+      <div class="hist">${hist.length ? hist.map(([d, v]) => `<div class="hist-row"><span>${fmtD(d)}</span><span class="num">${eur.format(v)}</span><button type="button" data-delprice="${d}" aria-label="Preis vom ${fmtD(d)} löschen">löschen</button></div>`).join('') : '<div class="hist-row muted">Noch keine Preise.</div>'}</div>
+      <form class="form" id="sh-edit"><h3 style="font-size:1rem">Angaben</h3>${fieldsHtml(p, 'e')}<div class="inline"><button class="btn primary" type="submit">Änderungen speichern</button></div></form>
+      ${isSold(p) ? `<form class="form" id="sh-gone"><h3 style="font-size:1rem">${esc(GONE[p.status][0].toUpperCase() + GONE[p.status].slice(1))}</h3>
+        <div class="hint">${isOpened(p) ? `Geöffnet ${goneDate(p) ? 'am ' + fmtD(goneDate(p)) : '(Datum unbekannt)'}. Steht zur Nachverfolgung in den Abgängen und zählt vorerst nicht zur Bilanz. Willst du die Karten weiter verfolgen, lege sie als Single oder Collection neu an.`
+          : isDrafted(p) ? `Gedraftet ${goneDate(p) ? 'am ' + fmtD(goneDate(p)) : '(Datum unbekannt)'}. Beiträge der Mitspieler ${eur.format(proceeds(p))}. Steht zur Nachverfolgung in den Abgängen und zählt vorerst nicht zur Bilanz.`
+          : `Verkauft am ${fmtD(goneDate(p))} für ${eur.format(proceeds(p))}. Der Gewinn oder Verlust steht hier zur Nachverfolgung und zählt nicht zur Bilanz.`}</div>
+        <div class="inline"><div class="field"><label for="sh-gd">Datum</label><input id="sh-gd" type="date" value="${esc(goneDate(p) || '')}"></div>${isOpened(p) ? '' : `<div class="field"><label for="sh-ga">${isDrafted(p) ? 'Beiträge (€)' : 'Erlös (€)'}</label><input class="price-in" id="sh-ga" inputmode="decimal" value="${esc(String(proceeds(p)).replace('.', ','))}"></div>`}<button class="btn" type="submit">Speichern</button><button class="btn" type="button" id="sh-unsell">Wieder in den Bestand</button></div>
+      </form>` : `<form class="form" id="sh-sell"><h3 style="font-size:1rem">Abgang erfassen</h3>
+        <div class="inline"><div class="field"><label for="sh-sd">Datum</label><input id="sh-sd" type="date" value="${today()}"></div><div class="field"><label for="sh-sp">Betrag gesamt (€)</label><input class="price-in" id="sh-sp" inputmode="decimal" placeholder="Erlös / Beiträge"></div></div>
+        <div class="inline"><button class="btn" type="submit">Als verkauft markieren</button>${p.kat === 'sealed' ? `<button class="btn" type="button" id="sh-draft">Als gedraftet markieren</button><button class="btn" type="button" id="sh-open">Als geöffnet markieren</button>` : ''}</div>
+        <div class="hint">Verkauft: Erlös nach Gebühren und Versand. ${p.kat === 'sealed' ? 'Gedraftet: Betrag = Beiträge der Mitspieler (leer = 0). Geöffnet: ohne Betrag. Alle Abgänge stehen zur Nachverfolgung da und zählen vorerst nicht zur Bilanz.' : ''}</div>
+      </form>`}
+      <div class="inline">${S.confirmDelete ? `<span>Position und Preisverlauf endgültig löschen?</span><button class="btn danger" id="sh-del-yes" type="button">Ja, löschen</button><button class="btn" id="sh-del-no" type="button">Abbrechen</button>` : `<button class="btn danger" id="sh-del" type="button">Position löschen</button>`}</div>
+    </div></div>`;
+    const ser = entries(p).map(([d, v]) => ({ d, wert: v * qty(p), einsatz: e, n: 1 }));
+    drawChart(document.getElementById('sh-chart'), ser);
+  }
+
+  // ---------- Schreiben ----------
+  function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2200); }
+  async function write(fn, ok) {
+    if (!S.db) { toast('Keine Verbindung zur Datenbank'); return false; }
+    try { await fn(); if (ok) toast(ok); return true; }
+    catch (err) {
+      if (err?.code === 'unavailable') { try { await new Promise(r => setTimeout(r, 600 + Math.random() * 600)); await fn(); if (ok) toast(ok); return true; } catch {} }
+      toast(err?.code === 'quota_exceeded' ? 'Speicher voll: bitte alte Positionen löschen' : err?.code === 'invalid_argument' ? 'Keine Schreibrechte für dieses Depot' : 'Speichern fehlgeschlagen, bitte nochmal');
+      return false;
+    }
+  }
+  const ref = id => S.db.collection('positionen').doc(id);
+  const setPrice = (id, d, v) => write(() => ref(id).update({ preise: { [d]: v } }), `${eur.format(v)} gespeichert`);
+
+  // ---------- Ereignisse ----------
+  document.querySelector('.tabs').addEventListener('click', e => {
+    const b = e.target.closest('button[data-tab]'); if (!b) return;
+    S.tab = b.dataset.tab; store.set('tab', S.tab); S.pendingRender = false; render(); window.scrollTo(0, 0);
+  });
+  document.getElementById('filters').addEventListener('click', e => {
+    const b = e.target.closest('[data-game]'); if (!b) return;
+    S.game = b.dataset.game; store.set('game', S.game); render();
+  });
+  view.addEventListener('click', async e => {
+    const head = e.target.closest('[data-cat]');
+    if (head) { const k = head.dataset.cat; S.open.has(k) ? S.open.delete(k) : S.open.add(k); store.set('open', [...S.open]); render(); return; }
+    const row = e.target.closest('.row[data-id]');
+    if (row) { openDetail(row.dataset.id); return; }
+    const same = e.target.closest('[data-same]');
+    if (same) { const p = S.positions.find(x => x.id === same.dataset.same); const l = p && lastAt(p); if (l) { same.disabled = true; await setPrice(p.id, today(), l.v); focusNextDue(); } return; }
+    if (e.target.id === 'exp-json') exportFile('json');
+    if (e.target.id === 'exp-csv') exportFile('csv');
+  });
+  view.addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    if (f.dataset.save) {
+      const inp = f.querySelector('input'); const v = num(inp.value);
+      if (!isFinite(v) || v < 0) { inp.focus(); toast('Bitte einen Preis eingeben, z. B. 129,90'); return; }
+      inp.value = ''; inp.blur();
+      await setPrice(f.dataset.save, today(), v); focusNextDue(); return;
+    }
+    if (f.id === 'cfg-form') {
+      const sprachen = LANGS.map(([c]) => c).filter(c => document.getElementById('cfg-l-' + c).checked).join(',');
+      const raw = document.getElementById('cfg-c').value.trim();
+      const m = raw.match(/sellerCountry=([0-9,%C]+)/i);
+      const laender = m ? decodeURIComponent(m[1]) : '';
+      if (raw && !m) { toast('Im Link fehlt ein Länderfilter (sellerCountry)'); return; }
+      await write(() => S.db.doc('einstellungen/links').set({ sprachen, laender }), 'Filter gespeichert');
+      return;
+    }
+    if (f.id === 'new-form') {
+      const d = readFields('n');
+      if (!d.name) { document.getElementById('n-name').focus(); toast('Bitte einen Namen eingeben'); return; }
+      const pv = num(document.getElementById('n-preis').value), pd = document.getElementById('n-datum').value || today();
+      const docData = { ...d, preise: isFinite(pv) ? { [pd]: pv } : {}, status: 'bestand', erstellt: today() };
+      if (docData.einstand == null) delete docData.einstand;
+      const ok = await write(() => S.db.collection('positionen').add(docData), `„${d.name}“ angelegt`);
+      if (ok) { f.reset(); document.getElementById('n-datum').value = today(); }
+    }
+  });
+  function focusNextDue() { requestAnimationFrame(() => { render(); const n = view.querySelector('.price-in'); if (n) n.focus({ preventScroll: false }); }); }
+
+  sheetRoot.addEventListener('click', async e => {
+    if (e.target.id === 'sheet-bg' || e.target.id === 'sh-close') { closeDetail(); return; }
+    const id = S.detail; if (!id) return;
+    const dp = e.target.closest('[data-delprice]');
+    if (dp) { await write(() => ref(id).update({ preise: { [dp.dataset.delprice]: null } }), 'Preis gelöscht'); renderSheet(); return; }
+    if (e.target.id === 'sh-del') { S.confirmDelete = true; renderSheet(); return; }
+    if (e.target.id === 'sh-del-no') { S.confirmDelete = false; renderSheet(); return; }
+    if (e.target.id === 'sh-del-yes') { if (await write(() => ref(id).delete(), 'Position gelöscht')) closeDetail(); return; }
+    if (e.target.id === 'sh-unsell') { await write(() => ref(id).update({ status: 'bestand', verkauf: null, geoeffnet: null, gedraftet: null }), 'Zurück im Bestand'); renderSheet(); }
+    if (e.target.id === 'sh-draft') { const d = document.getElementById('sh-sd').value || today(); const v = num(document.getElementById('sh-sp').value); await write(() => ref(id).update({ status: 'gedraftet', gedraftet: { datum: d, erloes: isFinite(v) && v > 0 ? v : 0 } }), 'Als gedraftet markiert'); renderSheet(); }
+    if (e.target.id === 'sh-open') { const d = document.getElementById('sh-sd').value || today(); await write(() => ref(id).update({ status: 'geoeffnet', geoeffnet: { datum: d } }), 'Als geöffnet markiert'); renderSheet(); }
+  });
+  sheetRoot.addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = S.detail; if (!id) return;
+    if (e.target.id === 'sh-addprice') {
+      const v = num(document.getElementById('sh-p').value), d = document.getElementById('sh-d').value || today();
+      if (!isFinite(v) || v < 0) { toast('Bitte einen Preis eingeben'); return; }
+      await setPrice(id, d, v); renderSheet();
+    }
+    if (e.target.id === 'sh-edit') {
+      const d = readFields('e'); if (!d.name) { toast('Name fehlt'); return; }
+      await write(() => ref(id).update(d), 'Gespeichert'); renderSheet();
+    }
+    if (e.target.id === 'sh-sell') {
+      const v = num(document.getElementById('sh-sp').value), d = document.getElementById('sh-sd').value || today();
+      if (!isFinite(v) || v < 0) { toast('Bitte den Erlös eingeben'); return; }
+      await write(() => ref(id).update({ status: 'verkauft', verkauf: { preis: v, datum: d } }), 'Als verkauft markiert'); renderSheet();
+    }
+    if (e.target.id === 'sh-gone') {
+      const p = S.positions.find(x => x.id === id); if (!p) return;
+      const d = document.getElementById('sh-gd').value || null;
+      const a = num(document.getElementById('sh-ga')?.value); const amt = isFinite(a) && a >= 0 ? a : proceeds(p);
+      const patch = isOpened(p) ? { geoeffnet: { datum: d } } : isDrafted(p) ? { gedraftet: { datum: d, erloes: amt } } : { verkauf: { preis: amt, datum: d || today() } };
+      await write(() => ref(id).update(patch), 'Datum gespeichert'); renderSheet();
+    }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.detail) closeDetail(); });
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (S.tab === 'depot' && S.loaded) drawChart(document.getElementById('chart'), series(S.positions.filter(gameOk))); }, 150); });
+
+  // ---------- Export ----------
+  async function exportFile(kind) {
+    if (!S.downloads) { toast('Export ist in dieser Ansicht nicht verfügbar'); return; }
+    const stamp = today();
+    let data, filename;
+    if (kind === 'json') {
+      data = JSON.stringify({ exportiert: stamp, positionen: S.positions, einstellungen: window.depotImport.einstellungen() }, null, 2);
+      filename = `Sammelkarten-Depot ${stamp}.json`;
+    } else {
+      const head = ['Kategorie', 'Spiel', 'Gruppe', 'Name', 'Details', 'Menge', 'Einstand/Stk', 'Letzter Preis/Stk', 'Preisdatum', 'Wert', 'G/V', 'Status', 'Erlös/Beiträge', 'Abgangsdatum', 'Link'];
+      const q = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
+      const n = v => v == null || v === '' ? '' : String(Math.round(v * 100) / 100).replace('.', ',');
+      const rows = S.positions.map(p => { const l = lastAt(p); return [CATS.find(c => c.key === p.kat)?.label, GAME_LABEL[p.spiel], p.gruppe, p.name, p.details, qty(p), n(cost(p) / qty(p)), n(l?.v), l?.d, n(value(p)), n(value(p) - cost(p)), p.status, isSold(p) ? n(proceeds(p)) : '', goneDate(p), effLink(p.link)].map(q).join(';'); });
+      data = '﻿' + [head.map(q).join(';'), ...rows].join('\r\n');
+      filename = `Sammelkarten-Depot ${stamp}.csv`;
+    }
+    try { await S.downloads.save({ filename, data }); toast('Export gespeichert'); }
+    catch (err) { if (err?.code !== 'declined') toast('Export nicht möglich'); }
+  }
+
+  // ---------- Start ----------
+  render();
+  (async () => {
+    const conn = document.getElementById('conn');
+    let db = null;
+    try { db = await window.claude?.use?.('db'); } catch {}
+    try { S.downloads = await window.claude?.use?.('downloads'); } catch {}
+    if (!db) {
+      conn.textContent = 'offline';
+      view.innerHTML = `<div class="empty"><h2 style="font-size:1.1rem;margin-bottom:6px">Keine Verbindung zum Depot</h2>Der Speicher dieses Browsers ist nicht verfügbar. Bitte nicht im privaten Modus öffnen.</div>`;
+      return;
+    }
+    S.db = db;
+    db.doc('einstellungen/links').onSnapshot(snap => {
+      const d = snap.exists ? snap.data() : null;
+      S.linkCfg = { sprachen: typeof d?.sprachen === 'string' ? d.sprachen : '1,3', laender: typeof d?.laender === 'string' ? d.laender : '' };
+      if (S.loaded) render();
+    }, () => {});
+    db.collection('positionen').onSnapshot(snap => {
+      S.positions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      S.loaded = true;
+      conn.textContent = `${S.positions.filter(p => !isSold(p)).length} Positionen`;
+      render();
+      if (S.detail && !sheetRoot.contains(document.activeElement)) renderSheet();
+    }, err => {
+      conn.textContent = 'Verbindung unterbrochen';
+      if (err?.code === 'revoked') view.innerHTML = `<div class="empty">Der Zugriff auf dieses Depot ist nicht mehr möglich.</div>`;
+    });
+  })();
+})();
+</script>
+<script>
+// Backup importieren: ersetzt alle Daten auf diesem Gerät nach Bestätigung
+(() => {
+  let pending = null;
+  const box = () => document.getElementById('imp-confirm');
+  const fmt = s => { try { const [y, m, d] = s.split('-'); return `${d}.${m}.${y}`; } catch { return s; } };
+  const toast = m => { const t = document.getElementById('toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2600); };
+  document.addEventListener('click', async e => {
+    if (e.target.id === 'imp-btn') { document.getElementById('imp-file').click(); return; }
+    if (e.target.id === 'imp-no') { pending = null; box().innerHTML = ''; return; }
+    if (e.target.id === 'imp-yes' && pending) {
+      try { await window.depotImport.replace(pending); toast(`${pending.positionen.length} Positionen importiert`); pending = null; }
+      catch { toast('Import fehlgeschlagen, bitte nochmal'); }
+    }
+  });
+  document.addEventListener('change', async e => {
+    if (e.target.id !== 'imp-file') return;
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try { pending = window.depotImport.parse(await f.text()); }
+    catch { box().innerHTML = '<div class="hint loss">Die Datei ist kein Backup des Sammelkarten-Depots.</div>'; return; }
+    box().innerHTML = `<div class="inline" style="margin-top:10px"><span>Backup${pending.datum ? ' vom ' + fmt(pending.datum) : ''} mit ${pending.positionen.length} Positionen laden? Alle Daten auf diesem Gerät werden ersetzt.</span><button class="btn primary" id="imp-yes" type="button">Ja, ersetzen</button><button class="btn" id="imp-no" type="button">Abbrechen</button></div>`;
+  });
+})();
+</script>
+</body>
+</html>

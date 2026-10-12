@@ -1,7 +1,7 @@
 {
-  "name": "Sammelkarten-Depot",
-  "short_name": "Depot",
-  "description": "Privates Sammelkarten-Depot",
+  "name": "Finanzen",
+  "short_name": "Finanzen",
+  "description": "Privates Finanz-Dashboard der Familie",
   "lang": "de",
   "start_url": "./",
   "scope": "./",
