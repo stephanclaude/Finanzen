@@ -200,9 +200,16 @@ dialog::backdrop { background: rgb(10 15 20 / .45); }
 @media (max-width: 520px) { .split { grid-template-columns: 1fr; justify-items: center; } .split .leg { width: 100%; } }
 .donut { position: relative; width: 200px; height: 200px; }
 .donut svg { display: block; width: 100%; height: 100%; }
-.donut path { stroke: var(--surface); stroke-width: 2; stroke-linejoin: round; cursor: pointer; transition: opacity .15s; }
-.donut[data-aktiv] path:not([data-aktiv]) { opacity: .35; }
-.donut .mitte { position: absolute; inset: 50px; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.donut svg { overflow: visible; }
+.donut g { cursor: pointer; transition: transform .18s ease-out; }
+.donut path { transition: opacity .18s; }
+.donut path { stroke: var(--surface); stroke-width: 2; stroke-linejoin: round; }
+.donut text { font-family: var(--font-num); font-size: 11px; font-weight: 500; fill: #FFFFFF; stroke: rgb(0 0 0 / .45); stroke-width: 2.5px; paint-order: stroke; pointer-events: none; }
+/* gewähltes Stück rückt nach außen, die anderen treten zurück */
+.donut[data-aktiv] g:not([data-aktiv]) path { opacity: .4; }
+.donut g[data-aktiv] path { stroke-width: 3; }
+@media (prefers-reduced-motion: reduce) { .donut g { transition: none; } }
+.donut .mitte { position: absolute; inset: 54px; display: grid; grid-template-columns: 100%; align-content: center; text-align: center; pointer-events: none; }
 .donut .mitte b { font-family: var(--font-num); font-weight: 500; font-size: 15px; }
 .donut .mitte span { font-size: 12px; color: var(--muted); overflow-wrap: break-word; hyphens: auto; }
 .leg { display: grid; gap: 2px; }
@@ -657,18 +664,20 @@ function aufteilung(ber) {
   const pos = werte.filter(x => x.w > 0.5).sort((a, c) => c.w - a.w), neg = werte.filter(x => x.w < -0.5);
   const summe = pos.reduce((s, x) => s + x.w, 0);
   if (!pos.length) return '';
-  const R = 96, r = 60, C = 100;
+  const R = 90, r = 54, C = 100, AUS = 8; // AUS: so weit rückt das gewählte Stück nach außen
   const pt = (a, rad) => `${(C + rad * Math.sin(a)).toFixed(2)},${(C - rad * Math.cos(a)).toFixed(2)}`;
   let a0 = 0;
+  const prozent = w => (w / summe * 100).toLocaleString('de-AT', { maximumFractionDigits: w / summe < 0.1 ? 1 : 0 }) + ' %';
   const teile = pos.map((x, i) => {
     const anteil = x.w / summe, a1 = a0 + anteil * 2 * Math.PI, gross = anteil > 0.5 ? 1 : 0;
     // ein einzelner Baustein (100 %) braucht zwei Halbkreise
     const d = anteil > 0.9999 ? `M${pt(0, R)}A${R},${R} 0 1 1 ${pt(Math.PI, R)}A${R},${R} 0 1 1 ${pt(0, R)}ZM${pt(0, r)}A${r},${r} 0 1 0 ${pt(Math.PI, r)}A${r},${r} 0 1 0 ${pt(0, r)}Z`
       : `M${pt(a0, R)}A${R},${R} 0 ${gross} 1 ${pt(a1, R)}L${pt(a1, r)}A${r},${r} 0 ${gross} 0 ${pt(a0, r)}Z`;
-    a0 = a1;
-    return `<path d="${d}" fill="${farbe.get(x.b.id)}" fill-rule="evenodd" data-i="${i}"/>`;
+    const am = (a0 + a1) / 2; a0 = a1;
+    // Prozent direkt auf dem Stück, wenn es breit genug ist (sonst steht es in der Legende)
+    const lab = anteil >= 0.045 ? `<text x="${(C + (R + r) / 2 * Math.sin(am)).toFixed(1)}" y="${(C - (R + r) / 2 * Math.cos(am)).toFixed(1)}" text-anchor="middle" dominant-baseline="central">${prozent(x.w).replace(' %', '%')}</text>` : '';
+    return `<g data-i="${i}" data-dx="${(AUS * Math.sin(am)).toFixed(2)}" data-dy="${(-AUS * Math.cos(am)).toFixed(2)}"><path d="${d}" fill="${farbe.get(x.b.id)}" fill-rule="evenodd"/>${lab}</g>`;
   }).join('');
-  const prozent = w => (w / summe * 100).toLocaleString('de-AT', { maximumFractionDigits: w / summe < 0.1 ? 1 : 0 }) + ' %';
   const info = pos.map(x => ({ n: x.b.name, w: fEur0(x.w), p: prozent(x.w) }));
   return `<section class="card">
     <div class="card-head"><h2>Wo liegt wie viel</h2></div>
@@ -687,14 +696,18 @@ function zeichneTorten() {
     const info = JSON.parse(el.dataset.torte), mitte = el.querySelector('.mitte'), leg = el.parentNode.querySelector('.leg');
     const setze = i => {
       el.toggleAttribute('data-aktiv', i != null);
-      el.querySelectorAll('path').forEach(p => p.toggleAttribute('data-aktiv', p.dataset.i == i));
+      el.querySelectorAll('g[data-i]').forEach(g => { const an = g.dataset.i == i; g.toggleAttribute('data-aktiv', an); g.style.transform = an && info.length > 1 ? `translate(${g.dataset.dx}px, ${g.dataset.dy}px)` : ''; });
       leg?.querySelectorAll('a').forEach(a => a.toggleAttribute('data-aktiv', a.dataset.i == i));
       mitte.innerHTML = ''; const b = document.createElement('b'), sp = document.createElement('span');
       if (i == null) { b.textContent = el.dataset.summe; sp.textContent = info.length + ' Bausteine'; }
-      else { b.textContent = info[i].w; sp.textContent = `${info[i].n} · ${info[i].p}`; }
+      else { b.textContent = info[i].w; sp.textContent = info[i].n; }
       mitte.append(b, sp);
     };
-    el.querySelectorAll('path').forEach(p => { p.addEventListener('pointerenter', () => setze(p.dataset.i)); p.addEventListener('pointerdown', () => setze(p.dataset.i)); });
+    // Maus: zeigen beim Darüberfahren. Finger: antippen wählt, nochmal antippen hebt die Auswahl auf.
+    el.querySelectorAll('g[data-i]').forEach(g => {
+      g.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') setze(g.dataset.i); });
+      g.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') setze(g.hasAttribute('data-aktiv') ? null : g.dataset.i); });
+    });
     el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') setze(null); });
     leg?.querySelectorAll('a').forEach(a => { a.addEventListener('pointerenter', () => setze(a.dataset.i)); a.addEventListener('pointerleave', () => setze(null)); });
   });
