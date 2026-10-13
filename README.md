@@ -28,6 +28,8 @@ Unter **Vermögen** zeigt eine Torte „Wo liegt wie viel“ mit Betrag und Ante
 
 Bei leeren Laufenden Kosten legt „Unsere Kostenbausteine anlegen“ Wohnen (dunkelgrün), Haushalt (grün), Gesundheit (hellgrün), Investment & Finanzen (braungrün), Auto (orange) und Freizeit (magenta) an. Jeder Baustein kann unter „Bearbeiten“ eine eigene Farbe bekommen; die Farbe gilt in der Torte, in den Anteilsbalken und in der gestapelten Monatsplanung.
 
+**Vergleich mit dem Vorjahr (Laufende Kosten → „Vergleich mit dem Vorjahr“):** Jahr wählen, dann steht jeder Monat neben dem Vorjahresmonat, dazu Ø pro Monat und Summe (im laufenden Jahr bis zum aktuellen Monat, damit es vergleichbar bleibt) gesamt und je Baustein. Vergangene Monate rechnet die App aus den Posten (Betrag, Rhythmus, Fälligkeit) und den für den Monat eingetragenen tatsächlichen Beträgen; fixe Kosten brauchen also keine Eingabe, schwankende (z. B. Lebensmittel) trägt man im Monat ein. Eine Tabelle mit den Spalten Monat; Baustein; Posten; Betrag (aus Excel kopiert oder als CSV) lässt sich einspielen, fehlende Posten werden angelegt.
+
 Bei leerem Vermögen legt „Unsere Bausteine anlegen“ Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus und Eigentumshaus an.
 
 Weitere Funktionen: Familienmitglieder (voreingestellt: Stephan, Vicky, Kids) mit Filter „wem gehört's“, Posten zwischen Bausteinen verschieben, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON inklusive Sammelkarten-Depot (Export/Import; alte Depot-Backups werden ebenfalls angenommen), Beispieldaten zum Ausprobieren.
