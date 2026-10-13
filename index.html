@@ -196,6 +196,18 @@ dialog::backdrop { background: rgb(10 15 20 / .45); }
 :root { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948; --s0: #8C96A0; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; --s0: #6B7682; } }
 :root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; --s0: #6B7682; }
+/* Wählbare Bausteinfarben */
+:root { --f-dunkelgruen: #1F6B3A; --f-gruen: #3FA34D; --f-hellgruen: #9ACD5E; --f-braungruen: #7D7A3C; --f-orange: #EB6834; --f-magenta: #D6458B; --f-blau: #2A78D6; --f-tuerkis: #1BAF7A; --f-gelb: #EDA100; --f-violett: #6250D6; --f-rot: #E34948; --f-grau: #8C96A0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --f-dunkelgruen: #3E8E57; --f-gruen: #4DB35B; --f-hellgruen: #8CC152; --f-braungruen: #A29E52; --f-orange: #E0703F; --f-magenta: #E0619C; --f-blau: #3987E5; --f-tuerkis: #199E70; --f-gelb: #C98500; --f-violett: #9085E9; --f-rot: #E66767; --f-grau: #6B7682; } }
+:root[data-theme="dark"] { --f-dunkelgruen: #3E8E57; --f-gruen: #4DB35B; --f-hellgruen: #8CC152; --f-braungruen: #A29E52; --f-orange: #E0703F; --f-magenta: #E0619C; --f-blau: #3987E5; --f-tuerkis: #199E70; --f-gelb: #C98500; --f-violett: #9085E9; --f-rot: #E66767; --f-grau: #6B7682; }
+.farben { display: flex; flex-wrap: wrap; gap: 8px; }
+.farben label { position: relative; cursor: pointer; }
+.farben input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.farben span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); font-size: 11px; color: var(--muted); }
+.farben input:checked + span { box-shadow: 0 0 0 2px var(--ink); }
+.farben input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 3px; }
+.chart .seg { stroke: var(--surface); stroke-width: 1; }
+.chart .hochpkt { fill: var(--warn); }
 .split { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: center; }
 @media (max-width: 520px) { .split { grid-template-columns: 1fr; justify-items: center; } .split .leg { width: 100%; } }
 .donut { position: relative; width: 200px; height: 200px; }
@@ -463,6 +475,8 @@ const VORLAGEN = {
 };
 
 // Stephans Vermögensbausteine (12.10.2026); Sammelkarten kommen automatisch aus dem Sammelkarten-Depot dazu
+// Stephans Kostenbausteine mit Farben (13.10.2026)
+const STARTKOSTEN = [['Wohnen', 'dunkelgruen'], ['Haushalt', 'gruen'], ['Gesundheit', 'hellgruen'], ['Investment & Finanzen', 'braungruen'], ['Auto', 'orange'], ['Freizeit', 'magenta']];
 const STARTVERMOEGEN = [['stand', 'Sparkonto'], ['kurs', 'ETF-/Wertpapierdepot'], ['stand', 'Altersvorsorge'], ['kurs', 'Edelmetalle'], ['stand', 'Investitionen am/im Haus'], ['immobilie', 'Eigentumshaus']];
 
 /* ───────────── Berechnung: alles hängt an „Wert einer Position am Stichtag“ ───────────── */
@@ -550,8 +564,11 @@ function zeichneCharts() {
     svg.addEventListener('pointerleave', () => { hov.hidden = true; tip.hidden = true; });
   });
 }
-function balkenHtml(pl, klick) {
-  return `<div class="chart" data-bars='${esc(JSON.stringify(pl.map(m => ({ ym: m.ym, v: Math.round(m.summe * 100) / 100, n: m.posten.length }))))}' ${klick ? 'data-klick="1"' : ''} role="img" aria-label="Fällige Zahlungen der nächsten 12 Monate"></div>`;
+// farbe (Map Baustein → Farbe): Balken nach Bausteinen gestapelt, in der Reihenfolge der Bausteine
+function balkenHtml(pl, klick, farbe) {
+  const seg = m => { if (!farbe) return undefined; const je = new Map(); for (const x of m.posten) je.set(x.b.id, (je.get(x.b.id) || 0) + x.z);
+    return [...farbe.keys()].filter(id => je.get(id) > 0).map(id => [farbe.get(id), Math.round(je.get(id) * 100) / 100]); };
+  return `<div class="chart" data-bars='${esc(JSON.stringify(pl.map(m => ({ ym: m.ym, v: Math.round(m.summe * 100) / 100, n: m.posten.length, s: seg(m) }))))}' ${klick ? 'data-klick="1"' : ''} role="img" aria-label="Fällige Zahlungen der nächsten 12 Monate"></div>`;
 }
 function zeichneBalken(el) {
   const ms = JSON.parse(el.dataset.bars); const avg = ms.reduce((s, m) => s + m.v, 0) / (ms.length || 1);
@@ -564,7 +581,14 @@ function zeichneBalken(el) {
   for (let g = 0; g <= top + step / 2; g += step) s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text class="ax" x="${L - 6}" y="${y(g) + 3}" text-anchor="end">${kompakt.format(g)}</text>`;
   ms.forEach((m, i) => {
     const x = L + i * bw + gap / 2, w = bw - gap, h = Math.max(0, y(0) - y(m.v)), r = Math.min(4, w / 2, h);
-    if (h > 0) s += `<path class="bar${teuer({ summe: m.v }, avg) ? ' hoch' : ''}" d="M${x},${y(0)}V${y(m.v) + r}Q${x},${y(m.v)} ${x + r},${y(m.v)}H${x + w - r}Q${x + w},${y(m.v)} ${x + w},${y(m.v) + r}V${y(0)}Z"/>`;
+    const hoch = teuer({ summe: m.v }, avg);
+    if (h > 0 && m.s?.length) {
+      // gestapelt: unten der erste Baustein, nur das oberste Stück hat runde Ecken; teure Monate bekommen einen Punkt
+      let unten = 0;
+      m.s.forEach(([f, v], k) => { const y0 = y(unten), y1 = y(unten + v); unten += v;
+        s += k === m.s.length - 1 ? `<path class="seg" style="fill:${f}" d="M${x},${y0}V${y1 + Math.min(r, y0 - y1)}Q${x},${y1} ${x + r},${y1}H${x + w - r}Q${x + w},${y1} ${x + w},${y1 + Math.min(r, y0 - y1)}V${y0}Z"/>` : `<rect class="seg" style="fill:${f}" x="${x}" y="${y1}" width="${w}" height="${Math.max(0, y0 - y1)}"/>`; });
+      if (hoch) s += `<circle class="hochpkt" cx="${x + w / 2}" cy="${y(m.v) - 6}" r="3"/>`;
+    } else if (h > 0) s += `<path class="bar${hoch ? ' hoch' : ''}" d="M${x},${y(0)}V${y(m.v) + r}Q${x},${y(m.v)} ${x + r},${y(m.v)}H${x + w - r}Q${x + w},${y(m.v)} ${x + w},${y(m.v) + r}V${y(0)}Z"/>`;
     if (W >= 420 || i % 2 === 0) s += `<text class="ax" x="${x + w / 2}" y="${H - 6}" text-anchor="middle">${new Date(m.ym + '-15T12:00:00').toLocaleDateString('de-AT', { month: 'short' }).replace('.', '')}</text>`;
   });
   s += `<line class="avg" x1="${L}" x2="${W - R}" y1="${y(avg)}" y2="${y(avg)}"/><text class="ax" x="${W - R}" y="${y(avg) - 4}" text-anchor="end">Ø ${fEur0(avg)}</text>`;
@@ -629,37 +653,43 @@ function viewBereich(ber) {
   const B = BEREICHE[ber]; crumbs([['Dashboard', '#/'], [B.name]]);
   const bs = bausteineVon(ber).map(b => [b, bausteinWert(b)]).sort((a, c) => c[1] - a[1]).map(x => x[0]); const gesamt = bereichWert(ber), alt = bereichWert(ber, vormonatsende());
   const m = ber === 'kosten'; const pl = m ? plan(bs) : null, avg = m ? schnitt(pl) : 0;
+  const farbe = farbenVon(ber);
   const zeilen = bs.map(b => {
     const w = bausteinWert(b), n = positionen(b).length; const anteil = gesamt > 0 ? Math.max(0, w / gesamt * 100) : 0;
     return `<a class="row" href="#/b/${b.id}"><span class="name">${esc(b.name)}</span><span class="val">${fEur(w)}${m ? '<span class="muted">/M</span>' : ''}</span>
       <span class="meta">${n} ${n === 1 ? VORLAGEN[b.vorlage].posWort : VORLAGEN[b.vorlage].posMehr}</span><span class="sub">${gesamt > 0 ? Math.round(anteil) + ' %' : ''}</span>
-      <span class="share"><span style="width:${anteil.toFixed(1)}%"></span></span></a>`;
+      <span class="share"><span style="width:${anteil.toFixed(1)}%;background:${farbe.get(b.id)}"></span></span></a>`;
   }).join('');
   const kopf = m ? `
     <div class="lab">Laufende Kosten · Planung</div>
     <div class="big">${fEur0(avg)}<small>Ø/Monat</small></div>
     <div class="figs"><span>nächste 12 Monate <b>${fEur0(avg * 12)}</b></span><span>Tippe auf einen Monat zum Anpassen</span></div>
-    ${balkenHtml(pl, true)}` : `
+    ${balkenHtml(pl, true, farbe)}` : `
     <div class="lab">${B.name}</div>
     <div class="big">${fEur0(gesamt)}</div>
     <div class="figs">${bs.length ? `<span>${diff(gesamt, alt)}</span>` : ''}</div>
     ${chartHtml(verlauf(bs, d => bereichWert(ber, d)), 'e')}`;
   const eigene = bs.filter(b => !VORLAGEN[b.vorlage].extern).length;
-  const start = m || eigene ? '' : `<div class="empty">${bs.length ? 'Noch keine eigenen Vermögensbausteine.' : B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startVermoegen">Unsere Bausteine anlegen</button></div><small>Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus, Eigentumshaus</small></div>`;
+  const fehlend = STARTKOSTEN.filter(([n]) => !bs.some(b => b.name.trim().toLowerCase() === n.toLowerCase()));
+  const start = m ? (fehlend.length === STARTKOSTEN.length ? `<div class="empty">${bs.length ? 'Deine sechs Kostenbausteine fehlen noch.' : B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startKosten">Unsere Kostenbausteine anlegen</button></div><small>${STARTKOSTEN.map(x => x[0]).join(', ')}</small></div>` : '') : eigene ? '' : `<div class="empty">${bs.length ? 'Noch keine eigenen Vermögensbausteine.' : B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startVermoegen">Unsere Bausteine anlegen</button></div><small>Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus, Eigentumshaus</small></div>`;
   return filterzeile(!m) + `
   <section class="card">${kopf}</section>
-  ${m ? '' : aufteilung(ber)}
+  ${aufteilung(ber)}
   <section class="list">
     <div class="list-head"><h2>Bausteine</h2><button class="btn small primary" data-act="neuBaustein" data-bereich="${ber}">+ Baustein</button></div>
-    ${zeilen}${start}${!zeilen && m ? `<div class="empty">${B.leer}</div>` : ''}
+    ${zeilen}${start}
   </section>
   ${m && bs.length ? monatsListe(pl, avg) : ''}`;
 }
 
-// Wo liegt wie viel: Torte mit Legende. Farbe folgt dem Baustein (feste Reihenfolge), nicht seinem Rang.
-const FARBEN = 8;
+// Farbe eines Bausteins: selbst gewählt, sonst aus der geprüften Palette in fester Reihenfolge (folgt dem Baustein, nicht seinem Rang)
+const FARBWAHL = { dunkelgruen: 'Dunkelgrün', gruen: 'Grün', hellgruen: 'Hellgrün', braungruen: 'Braungrün', orange: 'Orange', magenta: 'Magenta', blau: 'Blau', tuerkis: 'Türkis', gelb: 'Gelb', violett: 'Violett', rot: 'Rot', grau: 'Grau' };
+const PALETTE = 8;
+const farbeVon = (b, i) => FARBWAHL[b.farbe] ? `var(--f-${b.farbe})` : i < PALETTE ? `var(--s${i + 1})` : 'var(--s0)';
+const farbenVon = ber => new Map(bausteineVon(ber).map((b, i) => [b.id, farbeVon(b, i)]));
+// Aufteilung als Torte mit Legende: Vermögen nach Wert, Laufende Kosten nach Ø pro Monat
 function aufteilung(ber) {
-  const alle = bausteineVon(ber), farbe = new Map(alle.map((b, i) => [b.id, i < FARBEN ? `var(--s${i + 1})` : 'var(--s0)']));
+  const alle = bausteineVon(ber), farbe = farbenVon(ber), m = ber === 'kosten';
   const werte = alle.map(b => ({ b, w: bausteinWert(b) }));
   const pos = werte.filter(x => x.w > 0.5).sort((a, c) => c.w - a.w), neg = werte.filter(x => x.w < -0.5);
   const summe = pos.reduce((s, x) => s + x.w, 0);
@@ -680,9 +710,9 @@ function aufteilung(ber) {
   }).join('');
   const info = pos.map(x => ({ n: x.b.name, w: fEur0(x.w), p: prozent(x.w) }));
   return `<section class="card">
-    <div class="card-head"><h2>Wo liegt wie viel</h2></div>
+    <div class="card-head"><h2>${m ? 'Wohin das Geld fließt' : 'Wo liegt wie viel'}</h2>${m ? '<span class="go">Ø pro Monat</span>' : ''}</div>
     <div class="split">
-      <div class="donut" data-torte='${esc(JSON.stringify(info))}' data-summe="${esc(fEur0(summe))}" role="img" aria-label="Aufteilung des Vermögens nach Bausteinen">
+      <div class="donut" data-torte='${esc(JSON.stringify(info))}' data-summe="${esc(fEur0(summe))}" role="img" aria-label="Aufteilung ${m ? 'der laufenden Kosten' : 'des Vermögens'} nach Bausteinen">
         <svg viewBox="0 0 200 200">${teile}</svg>
         <div class="mitte"><b>${fEur0(summe)}</b><span>${pos.length} Bausteine</span></div>
       </div>
@@ -736,7 +766,7 @@ function viewBaustein(id) {
     <div class="card-head"><div class="lab">${esc(b.name)} · ${V.name}</div><button class="btn small" data-act="bausteinBearbeiten">Bearbeiten</button></div>
     <div class="big">${fEur0(w)}${m ? '<small>Ø/Monat</small>' : ''}</div>
     <div class="figs">${m ? `<span>nächste 12 Monate <b>${fEur0(w * 12)}</b></span>` : `${V.kopf ? V.kopf.call(V, b) : ''}<span>${diff(w, bausteinWert(b, vormonatsende()))}</span>`}</div>
-    ${m ? balkenHtml(plan([b]), true) : chartHtml(verlauf([b], d => bausteinWert(b, d)), 'e')}
+    ${m ? balkenHtml(plan([b]), true, new Map([[b.id, farbenVon(ber).get(b.id)]])) : chartHtml(verlauf([b], d => bausteinWert(b, d)), 'e')}
   </section>
   <section class="list">
     <div class="list-head"><h2>${V.listTitel || V.posMehr}</h2><span class="inline-btns">${V.kursPflege && ps.length ? '<button class="btn small" data-act="kurse">Kurse aktualisieren</button>' : ''}<button class="btn small primary" data-act="pos" data-id="">+ ${V.posWort}</button></span></div>
@@ -978,6 +1008,10 @@ function oeffneBaustein(ber, bid) {
   $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${b ? 'Baustein bearbeiten' : 'Neuer Baustein in ' + BEREICHE[ber].name}</h2>
     <label class="field"><span>Name</span><input name="name" required value="${esc(b?.name || '')}" placeholder="${ber === 'kosten' ? 'z. B. Versicherungen' : 'z. B. ETF-Depot'}" autocomplete="off"></label>
     ${b ? '' : `<div class="field"><span>Vorlage</span><div class="typ">${vs.map(([k, v], i) => `<label><input type="radio" name="vorlage" value="${k}" ${i === 0 ? 'checked' : ''}><b>${v.name}</b><small>${v.info}</small></label>`).join('')}</div></div>`}
+    <div class="field"><span>Farbe</span><div class="farben">
+      <label title="automatisch"><input type="radio" name="farbe" value="" ${!b?.farbe ? 'checked' : ''} aria-label="automatisch"><span>A</span></label>
+      ${Object.entries(FARBWAHL).map(([k, n]) => `<label title="${n}"><input type="radio" name="farbe" value="${k}" ${b?.farbe === k ? 'checked' : ''} aria-label="${n}"><span style="background:var(--f-${k})"></span></label>`).join('')}
+    </div></div>
     <label class="field"><span>Notiz</span><textarea name="notiz">${esc(b?.notiz || '')}</textarea></label>
     <div class="sheet-foot">${b ? '<button type="button" class="btn danger left" data-act="bWeg">Baustein löschen</button>' : ''}<button type="button" class="btn" data-act="zu">Abbrechen</button><button class="btn primary">Speichern</button></div></form>`;
   const form = $dlg.firstChild;
@@ -988,8 +1022,9 @@ function oeffneBaustein(ber, bid) {
   };
   form.onsubmit = e => {
     e.preventDefault(); const fd = new FormData(form); $dlg.close();
-    if (b) aendern(() => { b.name = fd.get('name').trim(); b.notiz = fd.get('notiz').trim(); });
-    else { const id = uid(); aendern(() => { S.bausteine[id] = { id, vorlage: fd.get('vorlage'), name: fd.get('name').trim(), notiz: fd.get('notiz').trim(), positionen: {}, reihe: Object.keys(S.bausteine).length }; }); location.hash = '#/b/' + id; }
+    const farbe = fd.get('farbe') || undefined;
+    if (b) aendern(() => { b.name = fd.get('name').trim(); b.notiz = fd.get('notiz').trim(); if (farbe) b.farbe = farbe; else delete b.farbe; });
+    else { const id = uid(); aendern(() => { S.bausteine[id] = { id, vorlage: fd.get('vorlage'), name: fd.get('name').trim(), farbe, notiz: fd.get('notiz').trim(), positionen: {}, reihe: Object.keys(S.bausteine).length }; }); location.hash = '#/b/' + id; }
   };
   $dlg.showModal();
 }
@@ -1127,6 +1162,7 @@ document.addEventListener('click', e => {
   if (a === 'pos') oeffnePosition(bid, el.dataset.id);
   if (a === 'monat') oeffneMonat(el.dataset.ym);
   if (a === 'kurse') oeffneKurse(bid);
+  if (a === 'startKosten') aendern(() => { const da = bausteineVon('kosten').map(b => b.name.trim().toLowerCase()); STARTKOSTEN.filter(([n]) => !da.includes(n.toLowerCase())).forEach(([name, farbe], i) => { const id = uid(); S.bausteine[id] = { id, vorlage: 'kosten', name, farbe, notiz: '', positionen: {}, reihe: Object.keys(S.bausteine).length + i }; }); });
   if (a === 'startVermoegen') aendern(() => { STARTVERMOEGEN.forEach(([vorlage, name], i) => { const id = uid(); S.bausteine[id] = { id, vorlage, name, notiz: '', positionen: {}, reihe: Object.keys(S.bausteine).length + i }; }); });
   if (a === 'personWeg' && confirm('Person entfernen? Ihre Positionen bleiben erhalten und zählen dann zu „Familie“.')) aendern(() => { S.personen = S.personen.filter(p => p.id !== el.dataset.id); for (const b of Object.values(S.bausteine)) for (const p of Object.values(b.positionen || {})) if (p.person === el.dataset.id) delete p.person; if (personFilter === el.dataset.id) personFilter = ''; });
   if (a === 'export') exportieren();

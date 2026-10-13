@@ -26,6 +26,8 @@ Vorhandene Vorlagen:
 
 Unter **Vermögen** zeigt eine Torte „Wo liegt wie viel“ mit Betrag und Anteil je Baustein (antippen zeigt den Wert, die Legende führt zum Baustein). Oben links führt ein Zurück-Knopf immer eine Ebene hinauf, auch aus dem Sammelkarten-Depot zurück ins Dashboard.
 
+Bei leeren Laufenden Kosten legt „Unsere Kostenbausteine anlegen“ Wohnen (dunkelgrün), Haushalt (grün), Gesundheit (hellgrün), Investment & Finanzen (braungrün), Auto (orange) und Freizeit (magenta) an. Jeder Baustein kann unter „Bearbeiten“ eine eigene Farbe bekommen; die Farbe gilt in der Torte, in den Anteilsbalken und in der gestapelten Monatsplanung.
+
 Bei leerem Vermögen legt „Unsere Bausteine anlegen“ Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus und Eigentumshaus an.
 
 Weitere Funktionen: Familienmitglieder (voreingestellt: Stephan, Vicky, Kids) mit Filter „wem gehört's“, Posten zwischen Bausteinen verschieben, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON inklusive Sammelkarten-Depot (Export/Import; alte Depot-Backups werden ebenfalls angenommen), Beispieldaten zum Ausprobieren.
