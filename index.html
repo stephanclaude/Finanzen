@@ -196,6 +196,23 @@ dialog::backdrop { background: rgb(10 15 20 / .45); }
 :root { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948; --s0: #8C96A0; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; --s0: #6B7682; } }
 :root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; --s0: #6B7682; }
+/* Wählbare Bausteinfarben */
+:root { --f-dunkelgruen: #1F6B3A; --f-gruen: #3FA34D; --f-hellgruen: #9ACD5E; --f-braungruen: #7D7A3C; --f-orange: #EB6834; --f-magenta: #D6458B; --f-blau: #2A78D6; --f-tuerkis: #1BAF7A; --f-gelb: #EDA100; --f-violett: #6250D6; --f-rot: #E34948; --f-grau: #8C96A0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --f-dunkelgruen: #3E8E57; --f-gruen: #4DB35B; --f-hellgruen: #8CC152; --f-braungruen: #A29E52; --f-orange: #E0703F; --f-magenta: #E0619C; --f-blau: #3987E5; --f-tuerkis: #199E70; --f-gelb: #C98500; --f-violett: #9085E9; --f-rot: #E66767; --f-grau: #6B7682; } }
+:root[data-theme="dark"] { --f-dunkelgruen: #3E8E57; --f-gruen: #4DB35B; --f-hellgruen: #8CC152; --f-braungruen: #A29E52; --f-orange: #E0703F; --f-magenta: #E0619C; --f-blau: #3987E5; --f-tuerkis: #199E70; --f-gelb: #C98500; --f-violett: #9085E9; --f-rot: #E66767; --f-grau: #6B7682; }
+.farben { display: flex; flex-wrap: wrap; gap: 8px; }
+.farben label { position: relative; cursor: pointer; }
+.farben input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.farben span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); font-size: 11px; color: var(--muted); }
+.farben input:checked + span { box-shadow: 0 0 0 2px var(--ink); }
+.farben input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 3px; }
+.chart .vb-v { fill: var(--muted); fill-opacity: .45; }
+.chart .vb-j { fill: var(--accent); }
+.chart .vb-p { fill: var(--accent); fill-opacity: .35; }
+.lg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.lg-j { background: var(--accent); } .lg-v { background: var(--muted); opacity: .45; } .lg-p { background: var(--accent); opacity: .35; }
+.chart .seg { stroke: var(--surface); stroke-width: 1; }
+.chart .hochpkt { fill: var(--warn); }
 .split { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: center; }
 @media (max-width: 520px) { .split { grid-template-columns: 1fr; justify-items: center; } .split .leg { width: 100%; } }
 .donut { position: relative; width: 200px; height: 200px; }
@@ -430,7 +447,7 @@ const VORLAGEN = {
       { k: 'person', l: 'Gehört', t: 'person' },
       { k: 'betrag', l: 'Betrag', t: 'eur', pflicht: true, halb: true },
       { k: 'intervall', l: 'Rhythmus', t: 'auswahl', optionen: Object.fromEntries(Object.entries(INTERVALLE).map(([k, v]) => [k, v[0]])), halb: true },
-      { k: 'beginn', l: 'Fällig am (erste Zahlung)', t: 'datum', halb: true },
+      { k: 'beginn', l: 'Fällig am (erste Zahlung, gern auch Jahre zurück)', t: 'datum', halb: true },
       { k: 'ende', l: 'Läuft bis (letzte Zahlung)', t: 'datum', halb: true },
       { k: 'frist', l: 'Nächster Kündigungs- oder Verlängerungstermin', t: 'datum' },
       { k: 'abweichungen', l: 'Abweichungen einzelner Monate', t: 'abw' },
@@ -463,6 +480,8 @@ const VORLAGEN = {
 };
 
 // Stephans Vermögensbausteine (12.10.2026); Sammelkarten kommen automatisch aus dem Sammelkarten-Depot dazu
+// Stephans Kostenbausteine mit Farben (13.10.2026)
+const STARTKOSTEN = [['Wohnen', 'dunkelgruen'], ['Haushalt', 'gruen'], ['Gesundheit', 'hellgruen'], ['Investment & Finanzen', 'braungruen'], ['Auto', 'orange'], ['Freizeit', 'magenta']];
 const STARTVERMOEGEN = [['stand', 'Sparkonto'], ['kurs', 'ETF-/Wertpapierdepot'], ['stand', 'Altersvorsorge'], ['kurs', 'Edelmetalle'], ['stand', 'Investitionen am/im Haus'], ['immobilie', 'Eigentumshaus']];
 
 /* ───────────── Berechnung: alles hängt an „Wert einer Position am Stichtag“ ───────────── */
@@ -493,8 +512,7 @@ function verlauf(bausteine, wertFn) {
   return pts;
 }
 // Monatsplanung: was in den kommenden Monaten fällig ist, Posten für Posten
-function plan(bausteine, n = 12) {
-  const start = ymHeute();
+function plan(bausteine, n = 12, start = ymHeute()) {
   return Array.from({ length: n }, (_, i) => {
     const ym = ymPlus(start, i), posten = [];
     for (const b of bausteine) { const V = VORLAGEN[b.vorlage]; if (!V?.zahlung) continue; for (const p of positionen(b)) { const z = V.zahlung(p, ym); if (z) posten.push({ b, p, z }); } }
@@ -519,6 +537,7 @@ function chartHtml(pts, fmt) {
 function zeichneCharts() {
   document.querySelectorAll('.chart[data-bars]').forEach(zeichneBalken);
   zeichneTorten();
+  document.querySelectorAll('.chart[data-vgl]').forEach(zeichneVergleich);
   document.querySelectorAll('.chart[data-chart]').forEach(el => {
     const pts = JSON.parse(el.dataset.chart); const fmt = el.dataset.fmt === 'm' ? v => fEur(v) + '/Monat' : fEur;
     const W = el.clientWidth || 300, H = el.clientHeight || 170, L = 46, R = 8, T = 10, B = 22;
@@ -550,8 +569,11 @@ function zeichneCharts() {
     svg.addEventListener('pointerleave', () => { hov.hidden = true; tip.hidden = true; });
   });
 }
-function balkenHtml(pl, klick) {
-  return `<div class="chart" data-bars='${esc(JSON.stringify(pl.map(m => ({ ym: m.ym, v: Math.round(m.summe * 100) / 100, n: m.posten.length }))))}' ${klick ? 'data-klick="1"' : ''} role="img" aria-label="Fällige Zahlungen der nächsten 12 Monate"></div>`;
+// farbe (Map Baustein → Farbe): Balken nach Bausteinen gestapelt, in der Reihenfolge der Bausteine
+function balkenHtml(pl, klick, farbe) {
+  const seg = m => { if (!farbe) return undefined; const je = new Map(); for (const x of m.posten) je.set(x.b.id, (je.get(x.b.id) || 0) + x.z);
+    return [...farbe.keys()].filter(id => je.get(id) > 0).map(id => [farbe.get(id), Math.round(je.get(id) * 100) / 100]); };
+  return `<div class="chart" data-bars='${esc(JSON.stringify(pl.map(m => ({ ym: m.ym, v: Math.round(m.summe * 100) / 100, n: m.posten.length, s: seg(m) }))))}' ${klick ? 'data-klick="1"' : ''} role="img" aria-label="Fällige Zahlungen der nächsten 12 Monate"></div>`;
 }
 function zeichneBalken(el) {
   const ms = JSON.parse(el.dataset.bars); const avg = ms.reduce((s, m) => s + m.v, 0) / (ms.length || 1);
@@ -564,7 +586,14 @@ function zeichneBalken(el) {
   for (let g = 0; g <= top + step / 2; g += step) s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text class="ax" x="${L - 6}" y="${y(g) + 3}" text-anchor="end">${kompakt.format(g)}</text>`;
   ms.forEach((m, i) => {
     const x = L + i * bw + gap / 2, w = bw - gap, h = Math.max(0, y(0) - y(m.v)), r = Math.min(4, w / 2, h);
-    if (h > 0) s += `<path class="bar${teuer({ summe: m.v }, avg) ? ' hoch' : ''}" d="M${x},${y(0)}V${y(m.v) + r}Q${x},${y(m.v)} ${x + r},${y(m.v)}H${x + w - r}Q${x + w},${y(m.v)} ${x + w},${y(m.v) + r}V${y(0)}Z"/>`;
+    const hoch = teuer({ summe: m.v }, avg);
+    if (h > 0 && m.s?.length) {
+      // gestapelt: unten der erste Baustein, nur das oberste Stück hat runde Ecken; teure Monate bekommen einen Punkt
+      let unten = 0;
+      m.s.forEach(([f, v], k) => { const y0 = y(unten), y1 = y(unten + v); unten += v;
+        s += k === m.s.length - 1 ? `<path class="seg" style="fill:${f}" d="M${x},${y0}V${y1 + Math.min(r, y0 - y1)}Q${x},${y1} ${x + r},${y1}H${x + w - r}Q${x + w},${y1} ${x + w},${y1 + Math.min(r, y0 - y1)}V${y0}Z"/>` : `<rect class="seg" style="fill:${f}" x="${x}" y="${y1}" width="${w}" height="${Math.max(0, y0 - y1)}"/>`; });
+      if (hoch) s += `<circle class="hochpkt" cx="${x + w / 2}" cy="${y(m.v) - 6}" r="3"/>`;
+    } else if (h > 0) s += `<path class="bar${hoch ? ' hoch' : ''}" d="M${x},${y(0)}V${y(m.v) + r}Q${x},${y(m.v)} ${x + r},${y(m.v)}H${x + w - r}Q${x + w},${y(m.v)} ${x + w},${y(m.v) + r}V${y(0)}Z"/>`;
     if (W >= 420 || i % 2 === 0) s += `<text class="ax" x="${x + w / 2}" y="${H - 6}" text-anchor="middle">${new Date(m.ym + '-15T12:00:00').toLocaleDateString('de-AT', { month: 'short' }).replace('.', '')}</text>`;
   });
   s += `<line class="avg" x1="${L}" x2="${W - R}" y1="${y(avg)}" y2="${y(avg)}"/><text class="ax" x="${W - R}" y="${y(avg) - 4}" text-anchor="end">Ø ${fEur0(avg)}</text>`;
@@ -629,37 +658,44 @@ function viewBereich(ber) {
   const B = BEREICHE[ber]; crumbs([['Dashboard', '#/'], [B.name]]);
   const bs = bausteineVon(ber).map(b => [b, bausteinWert(b)]).sort((a, c) => c[1] - a[1]).map(x => x[0]); const gesamt = bereichWert(ber), alt = bereichWert(ber, vormonatsende());
   const m = ber === 'kosten'; const pl = m ? plan(bs) : null, avg = m ? schnitt(pl) : 0;
+  const farbe = farbenVon(ber);
   const zeilen = bs.map(b => {
     const w = bausteinWert(b), n = positionen(b).length; const anteil = gesamt > 0 ? Math.max(0, w / gesamt * 100) : 0;
     return `<a class="row" href="#/b/${b.id}"><span class="name">${esc(b.name)}</span><span class="val">${fEur(w)}${m ? '<span class="muted">/M</span>' : ''}</span>
       <span class="meta">${n} ${n === 1 ? VORLAGEN[b.vorlage].posWort : VORLAGEN[b.vorlage].posMehr}</span><span class="sub">${gesamt > 0 ? Math.round(anteil) + ' %' : ''}</span>
-      <span class="share"><span style="width:${anteil.toFixed(1)}%"></span></span></a>`;
+      <span class="share"><span style="width:${anteil.toFixed(1)}%;background:${farbe.get(b.id)}"></span></span></a>`;
   }).join('');
   const kopf = m ? `
     <div class="lab">Laufende Kosten · Planung</div>
     <div class="big">${fEur0(avg)}<small>Ø/Monat</small></div>
     <div class="figs"><span>nächste 12 Monate <b>${fEur0(avg * 12)}</b></span><span>Tippe auf einen Monat zum Anpassen</span></div>
-    ${balkenHtml(pl, true)}` : `
+    <div class="actions" style="margin:0"><a class="btn small" href="#/kosten/vergleich">Vergleich mit dem Vorjahr ›</a></div>
+    ${balkenHtml(pl, true, farbe)}` : `
     <div class="lab">${B.name}</div>
     <div class="big">${fEur0(gesamt)}</div>
     <div class="figs">${bs.length ? `<span>${diff(gesamt, alt)}</span>` : ''}</div>
     ${chartHtml(verlauf(bs, d => bereichWert(ber, d)), 'e')}`;
   const eigene = bs.filter(b => !VORLAGEN[b.vorlage].extern).length;
-  const start = m || eigene ? '' : `<div class="empty">${bs.length ? 'Noch keine eigenen Vermögensbausteine.' : B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startVermoegen">Unsere Bausteine anlegen</button></div><small>Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus, Eigentumshaus</small></div>`;
+  const fehlend = STARTKOSTEN.filter(([n]) => !bs.some(b => b.name.trim().toLowerCase() === n.toLowerCase()));
+  const start = m ? (fehlend.length ? `<div class="empty">${bs.length ? (fehlend.length === STARTKOSTEN.length ? 'Deine sechs Kostenbausteine fehlen noch.' : 'Noch nicht angelegt: ' + fehlend.map(x => x[0]).join(', ') + '.') : B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startKosten">${fehlend.length === STARTKOSTEN.length ? 'Unsere Kostenbausteine anlegen' : 'Fehlende anlegen'}</button></div>${fehlend.length === STARTKOSTEN.length ? `<small>${STARTKOSTEN.map(x => x[0]).join(', ')}</small>` : ''}</div>` : '') : eigene ? '' : `<div class="empty">${bs.length ? 'Noch keine eigenen Vermögensbausteine.' : B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startVermoegen">Unsere Bausteine anlegen</button></div><small>Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus, Eigentumshaus</small></div>`;
   return filterzeile(!m) + `
   <section class="card">${kopf}</section>
-  ${m ? '' : aufteilung(ber)}
+  ${aufteilung(ber)}
   <section class="list">
     <div class="list-head"><h2>Bausteine</h2><button class="btn small primary" data-act="neuBaustein" data-bereich="${ber}">+ Baustein</button></div>
-    ${zeilen}${start}${!zeilen && m ? `<div class="empty">${B.leer}</div>` : ''}
+    ${zeilen}${start}
   </section>
   ${m && bs.length ? monatsListe(pl, avg) : ''}`;
 }
 
-// Wo liegt wie viel: Torte mit Legende. Farbe folgt dem Baustein (feste Reihenfolge), nicht seinem Rang.
-const FARBEN = 8;
+// Farbe eines Bausteins: selbst gewählt, sonst aus der geprüften Palette in fester Reihenfolge (folgt dem Baustein, nicht seinem Rang)
+const FARBWAHL = { dunkelgruen: 'Dunkelgrün', gruen: 'Grün', hellgruen: 'Hellgrün', braungruen: 'Braungrün', orange: 'Orange', magenta: 'Magenta', blau: 'Blau', tuerkis: 'Türkis', gelb: 'Gelb', violett: 'Violett', rot: 'Rot', grau: 'Grau' };
+const PALETTE = 8;
+const farbeVon = (b, i) => FARBWAHL[b.farbe] ? `var(--f-${b.farbe})` : i < PALETTE ? `var(--s${i + 1})` : 'var(--s0)';
+const farbenVon = ber => new Map(bausteineVon(ber).map((b, i) => [b.id, farbeVon(b, i)]));
+// Aufteilung als Torte mit Legende: Vermögen nach Wert, Laufende Kosten nach Ø pro Monat
 function aufteilung(ber) {
-  const alle = bausteineVon(ber), farbe = new Map(alle.map((b, i) => [b.id, i < FARBEN ? `var(--s${i + 1})` : 'var(--s0)']));
+  const alle = bausteineVon(ber), farbe = farbenVon(ber), m = ber === 'kosten';
   const werte = alle.map(b => ({ b, w: bausteinWert(b) }));
   const pos = werte.filter(x => x.w > 0.5).sort((a, c) => c.w - a.w), neg = werte.filter(x => x.w < -0.5);
   const summe = pos.reduce((s, x) => s + x.w, 0);
@@ -680,9 +716,9 @@ function aufteilung(ber) {
   }).join('');
   const info = pos.map(x => ({ n: x.b.name, w: fEur0(x.w), p: prozent(x.w) }));
   return `<section class="card">
-    <div class="card-head"><h2>Wo liegt wie viel</h2></div>
+    <div class="card-head"><h2>${m ? 'Wohin das Geld fließt' : 'Wo liegt wie viel'}</h2>${m ? '<span class="go">Ø pro Monat</span>' : ''}</div>
     <div class="split">
-      <div class="donut" data-torte='${esc(JSON.stringify(info))}' data-summe="${esc(fEur0(summe))}" role="img" aria-label="Aufteilung des Vermögens nach Bausteinen">
+      <div class="donut" data-torte='${esc(JSON.stringify(info))}' data-summe="${esc(fEur0(summe))}" role="img" aria-label="Aufteilung ${m ? 'der laufenden Kosten' : 'des Vermögens'} nach Bausteinen">
         <svg viewBox="0 0 200 200">${teile}</svg>
         <div class="mitte"><b>${fEur0(summe)}</b><span>${pos.length} Bausteine</span></div>
       </div>
@@ -713,6 +749,106 @@ function zeichneTorten() {
   });
 }
 
+/* ───────────── Vergleich mit dem Vorjahr (Laufende Kosten) ─────────────
+   Vergangene Monate = Plan plus die für den Monat eingetragenen Beträge (Abweichungen); so zählen fixe Posten automatisch. */
+function viewVergleich(jahrText) {
+  const jetzt = Number(ymHeute().slice(0, 4)), J = /^\d{4}$/.test(jahrText || '') ? Number(jahrText) : jetzt, V = J - 1;
+  crumbs([['Dashboard', '#/'], ['Laufende Kosten', '#/kosten'], [`Vergleich ${J}/${V}`]]);
+  const bs = bausteineVon('kosten'), farbe = farbenVon('kosten');
+  const pj = plan(bs, 12, J + '-01'), pv = plan(bs, 12, V + '-01');
+  const bis = J < jetzt ? 12 : J > jetzt ? 0 : Number(ymHeute().slice(5, 7)); // Monate, die schon vorbei bzw. laufend sind
+  const n = bis || 12, summe = (pl, k = n) => pl.slice(0, k).reduce((s, m) => s + m.summe, 0);
+  const sj = summe(pj), sv = summe(pv);
+  const zeitraum = bis === 12 ? `ganzes Jahr` : bis ? `Jänner bis ${fYm(J + '-' + String(bis).padStart(2, '0'), true).split(' ')[0]}` : 'ganzes Jahr, nur Plan';
+  const dif = (a, b, fmt = fEur0) => { if (!b && !a) return '<span class="muted">–</span>'; const d = a - b; return `<span class="${d > 0.5 ? 'loss' : d < -0.5 ? 'gain' : 'muted'}">${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}${b ? ` (${d >= 0 ? '+' : '−'}${Math.abs(d / b * 100).toLocaleString('de-AT', { maximumFractionDigits: 1 })} %)` : ''}</span>`; };
+  const jahre = [jetzt - 2, jetzt - 1, jetzt, jetzt + 1].map(y => `<a class="chip" href="#/kosten/vergleich/${y}" aria-pressed="${y === J}" style="text-decoration:none;color:inherit">${y}</a>`).join('');
+  const daten = pj.map((m, i) => ({ ym: m.ym, a: Math.round(pv[i].summe * 100) / 100, b: Math.round(m.summe * 100) / 100, plan: m.ym > ymHeute() }));
+  const proB = bs.map(b => { const ej = summe(plan([b], 12, J + '-01')), ev = summe(plan([b], 12, V + '-01')); return { b, ej, ev }; }).filter(x => x.ej || x.ev);
+  const leerV = !pv.some(m => m.summe);
+  return `<div class="filters">${jahre}</div>
+  <section class="card">
+    <div class="card-head"><div class="lab">${J} gegen ${V} · ${zeitraum}</div></div>
+    <div class="big">${fEur0(sj / n)}<small>Ø/Monat</small></div>
+    <div class="figs"><span>${V}: <b>${fEur0(sv / n)}</b>/Monat</span><span>${dif(sj / n, sv / n)} pro Monat</span><span>Summe ${fEur0(sj)} statt ${fEur0(sv)}</span></div>
+    <div class="chart" data-vgl='${esc(JSON.stringify(daten))}' data-j="${J}" data-v="${V}" role="img" aria-label="Kosten je Monat ${J} und ${V}"></div>
+    <div class="figs"><span><i class="lg lg-j"></i>${J}</span><span><i class="lg lg-v"></i>${V}</span>${daten.some(d => d.plan) ? '<span><i class="lg lg-p"></i>noch geplant</span>' : ''}</div>
+    ${leerV ? `<p class="muted" style="font-size:13px;margin:0">Für ${V} ist noch nichts erfasst. Wähle oben ${V} und tippe auf einen Monat, oder spiel unten eine Tabelle ein. Posten zählen ab ihrem Fälligkeitsdatum: Läuft ein Posten schon länger, setz das Datum zurück.</p>` : ''}
+  </section>
+  <section class="list">
+    <div class="list-head"><h2>Je Baustein</h2><span class="muted" style="font-size:13px">Ø/Monat ${J} · ${V}</span></div>
+    ${proB.map(x => `<a class="row" href="#/b/${x.b.id}"><span class="name"><i class="lg" style="background:${farbe.get(x.b.id)}"></i>${esc(x.b.name)}</span><span class="val">${fEur0(x.ej / n)}</span>
+      <span class="meta">${V}: ${fEur0(x.ev / n)}</span><span class="sub">${dif(x.ej / n, x.ev / n)}</span></a>`).join('') || '<div class="empty">Noch keine Posten.</div>'}
+  </section>
+  <section class="list">
+    <div class="list-head"><h2>Je Monat</h2><span class="muted" style="font-size:13px">antippen zum Bearbeiten</span></div>
+    ${pj.map((m, i) => `<button class="row" data-act="monat" data-ym="${m.ym}"><span class="name">${fYm(m.ym, true)}${m.ym > ymHeute() ? ' <small class="muted">Plan</small>' : ''}</span><span class="val">${fEur(m.summe)}</span>
+      <span class="meta">${fYm(pv[i].ym, true)}: ${fEur(pv[i].summe)}</span><span class="sub">${dif(m.summe, pv[i].summe)}</span></button>`).join('')}
+  </section>
+  <section class="section">
+    <h2>Tabelle einspielen</h2>
+    <p>Zum Beispiel deine Ausgaben von ${V} aus Excel: Spalten <b>Monat; Baustein; Posten; Betrag</b>, eine Zeile pro Zahlung. Monat als 2025-01 oder 01.2025. Du kannst die Zellen aus Excel kopieren und hier einfügen oder eine CSV-Datei wählen. Fehlende Posten werden angelegt, Bausteine müssen schon existieren.</p>
+    <textarea data-imp rows="5" style="width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;font-family:var(--font-num);font-size:13px" placeholder="2025-01;Haushalt;Lebensmittel;712,40&#10;2025-01;Auto;Tanken;138&#10;2025-02;Haushalt;Lebensmittel;655"></textarea>
+    <div class="actions" style="margin:0"><button class="btn primary" data-act="tabelle">Einspielen</button><label class="btn">CSV-Datei wählen<input type="file" accept=".csv,.txt,text/csv,text/plain" data-act="tabelleDatei" hidden></label></div>
+  </section>`;
+}
+// Paarweise Balken: Vorjahr grau, gewähltes Jahr in Akzentfarbe, geplante Monate heller
+function zeichneVergleich(el) {
+  const ds = JSON.parse(el.dataset.vgl), J = el.dataset.j, V = el.dataset.v;
+  const W = el.clientWidth || 300, H = el.clientHeight || 170, L = 46, R = 8, T = 10, B = 22;
+  if (!ds.some(d => d.a || d.b)) { el.innerHTML = '<div class="note">Noch keine Beträge für diese Jahre.</div>'; return; }
+  const max = Math.max(...ds.map(d => Math.max(d.a, d.b))), step = nice(max / 3 || 1), top = Math.ceil(max / step) * step;
+  const y = v => T + (top - v) / top * (H - T - B), bw = (W - L - R) / ds.length, g = Math.max(2, bw * 0.18), w = (bw - g) / 2 - 1;
+  const bar = (x, v, kl) => { const h = y(0) - y(v), r = Math.min(3, w / 2, h); return h > 0 ? `<path class="${kl}" d="M${x},${y(0)}V${y(v) + r}Q${x},${y(v)} ${x + r},${y(v)}H${x + w - r}Q${x + w},${y(v)} ${x + w},${y(v) + r}V${y(0)}Z"/>` : ''; };
+  let s = '';
+  for (let v = 0; v <= top + step / 2; v += step) s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${kompakt.format(v)}</text>`;
+  ds.forEach((d, i) => { const x0 = L + i * bw + g / 2;
+    s += bar(x0, d.a, 'vb-v') + bar(x0 + w + 2, d.b, d.plan ? 'vb-p' : 'vb-j');
+    if (W >= 420 || i % 2 === 0) s += `<text class="ax" x="${x0 + w + 1}" y="${H - 6}" text-anchor="middle">${new Date(d.ym + '-15T12:00:00').toLocaleDateString('de-AT', { month: 'short' }).replace('.', '')}</text>`; });
+  s += `<rect class="sel" hidden rx="4"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${s}</svg><div class="tip" hidden></div>`;
+  const svg = el.firstChild, tip = el.querySelector('.tip'), sel = svg.querySelector('.sel');
+  const idx = cx => Math.max(0, Math.min(ds.length - 1, Math.floor((cx - L) / bw)));
+  const zeig = cx => { const i = idx(cx), d = ds[i];
+    sel.hidden = false; sel.setAttribute('x', L + i * bw + 1); sel.setAttribute('y', T); sel.setAttribute('width', bw - 2); sel.setAttribute('height', H - T - B);
+    tip.hidden = false; tip.innerHTML = ''; const b = document.createElement('b'); b.textContent = `${J}: ${fEur(d.b)}${d.plan ? ' (Plan)' : ''}`;
+    const sp = document.createElement('span'); sp.textContent = `${V}: ${fEur(d.a)} · ${new Date(d.ym + '-15T12:00:00').toLocaleDateString('de-AT', { month: 'long' })}`;
+    tip.append(b, sp); const tw = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(W - tw, L + i * bw + bw / 2 - tw / 2)) + 'px'; tip.style.top = Math.max(0, y(Math.max(d.a, d.b)) - 52) + 'px'; };
+  svg.addEventListener('pointermove', e => zeig(e.clientX - svg.getBoundingClientRect().left));
+  svg.addEventListener('pointerdown', e => zeig(e.clientX - svg.getBoundingClientRect().left));
+  svg.addEventListener('pointerleave', () => { sel.hidden = true; tip.hidden = true; });
+  svg.addEventListener('click', e => oeffneMonat(ds[idx(e.clientX - svg.getBoundingClientRect().left)].ym));
+}
+// Tabelle (Monat; Baustein; Posten; Betrag) → tatsächliche Beträge je Posten und Monat
+function tabelleEinspielen(text) {
+  const bs = bausteineVon('kosten'), finde = n => bs.find(b => b.name.trim().toLowerCase() === n.trim().toLowerCase());
+  const summen = new Map(), fehler = [], unbekannt = new Set(); let zeilen = 0;
+  for (const roh of String(text).split(/\r?\n/)) {
+    if (!roh.trim()) continue;
+    const t = roh.split(roh.includes('\t') ? '\t' : roh.includes(';') ? ';' : ',').map(x => x.trim().replace(/^"|"$/g, ''));
+    if (t.length < 4) { fehler.push(roh); continue; }
+    let [mo, bn, pn, bt] = t; let ym = null;
+    if (/^\d{4}-\d{1,2}/.test(mo)) ym = mo.slice(0, 4) + '-' + mo.split('-')[1].padStart(2, '0');
+    else { const m = mo.match(/^(?:\d{1,2}\.)?(\d{1,2})[./](\d{4})$/); if (m) ym = m[2] + '-' + m[1].padStart(2, '0'); }
+    const v = zahl(bt);
+    if (!ym || v == null || !pn) { if (zeilen || !/monat/i.test(mo)) fehler.push(roh); continue; } // Kopfzeile überspringen
+    const b = finde(bn); if (!b) { unbekannt.add(bn); continue; }
+    const k = b.id + '\u0000' + pn.trim().toLowerCase() + '\u0000' + ym;
+    summen.set(k, { b, pn: pn.trim(), ym, v: (summen.get(k)?.v || 0) + v }); zeilen++;
+  }
+  if (!summen.size) return toast(unbekannt.size ? `Kein passender Baustein: ${[...unbekannt].join(', ')}` : 'Keine lesbaren Zeilen gefunden');
+  const neu = new Set([...summen.values()].filter(x => !Object.values(x.b.positionen || {}).some(p => p.name.trim().toLowerCase() === x.pn.toLowerCase())).map(x => x.b.name + ' · ' + x.pn));
+  if (!confirm(`${zeilen} Zeilen einspielen (${summen.size} Beträge)?${neu.size ? `\nNeue Posten: ${[...neu].join(', ')}` : ''}${unbekannt.size ? `\nÜbersprungen, Baustein fehlt: ${[...unbekannt].join(', ')}` : ''}${fehler.length ? `\nNicht lesbar: ${fehler.length} Zeilen` : ''}`)) return;
+  aendern(() => {
+    for (const x of summen.values()) {
+      const b = S.bausteine[x.b.id]; b.positionen = b.positionen || {};
+      let p = Object.values(b.positionen).find(q => q.name.trim().toLowerCase() === x.pn.toLowerCase());
+      if (!p) { p = { name: x.pn, betrag: 0, intervall: 'monat', notiz: 'aus Tabelle eingespielt, regulären Betrag noch eintragen', erstellt: heute() }; b.positionen[uid()] = p; }
+      p.abweichungen = p.abweichungen || {}; p.abweichungen[x.ym] = Math.round(x.v * 100) / 100;
+    }
+  });
+  toast(`${summen.size} Beträge eingespielt`);
+}
+
 function monatsListe(pl, avg) {
   return `<section class="list"><div class="list-head"><h2>Monatsplanung</h2></div>
     ${pl.map(mo => `<button class="row${teuer(mo, avg) ? ' hoch' : ''}" data-act="monat" data-ym="${mo.ym}"><span class="name">${fYm(mo.ym, true)}</span><span class="val">${fEur(mo.summe)}</span>
@@ -736,7 +872,7 @@ function viewBaustein(id) {
     <div class="card-head"><div class="lab">${esc(b.name)} · ${V.name}</div><button class="btn small" data-act="bausteinBearbeiten">Bearbeiten</button></div>
     <div class="big">${fEur0(w)}${m ? '<small>Ø/Monat</small>' : ''}</div>
     <div class="figs">${m ? `<span>nächste 12 Monate <b>${fEur0(w * 12)}</b></span>` : `${V.kopf ? V.kopf.call(V, b) : ''}<span>${diff(w, bausteinWert(b, vormonatsende()))}</span>`}</div>
-    ${m ? balkenHtml(plan([b]), true) : chartHtml(verlauf([b], d => bausteinWert(b, d)), 'e')}
+    ${m ? balkenHtml(plan([b]), true, new Map([[b.id, farbenVon(ber).get(b.id)]])) : chartHtml(verlauf([b], d => bausteinWert(b, d)), 'e')}
   </section>
   <section class="list">
     <div class="list-head"><h2>${V.listTitel || V.posMehr}</h2><span class="inline-btns">${V.kursPflege && ps.length ? '<button class="btn small" data-act="kurse">Kurse aktualisieren</button>' : ''}<button class="btn small primary" data-act="pos" data-id="">+ ${V.posWort}</button></span></div>
@@ -808,7 +944,8 @@ function render() {
   const h = location.hash.replace(/^#\/?/, '').split('/');
   let html;
   if (h[0] === 'kosten' && /^\d{4}-\d{2}$/.test(h[1] || '')) setTimeout(() => { history.replaceState(null, '', '#/kosten'); oeffneMonat(h[1]); });
-  if (h[0] === 'vermoegen' || h[0] === 'kosten') html = viewBereich(h[0]);
+  if (h[0] === 'kosten' && h[1] === 'vergleich') html = viewVergleich(h[2]);
+  else if (h[0] === 'vermoegen' || h[0] === 'kosten') html = viewBereich(h[0]);
   else if (h[0] === 'b' && h[1]) html = viewBaustein(h[1]);
   else if (h[0] === 'einstellungen') html = viewEinstellungen();
   else html = viewDashboard();
@@ -933,15 +1070,21 @@ function oeffneKurse(bid) {
 function oeffneMonat(ym) {
   const bid = location.hash.split('/')[1] === 'b' ? location.hash.split('/')[2] : null;
   const bs = bid ? [S.bausteine[bid]] : bausteineVon('kosten'); if (!bs[0]) return;
-  const mo = plan(bs, ymDiff(ymHeute(), ym) + 1).at(-1); const avg = schnitt(plan(bs));
+  const mo = plan(bs, 1, ym)[0]; const avg = schnitt(plan(bs)); const vorbei = ym < ymHeute();
   const posten = mo.posten.sort((a, c) => c.z - a.z || a.p.name.localeCompare(c.p.name));
+  // Posten ohne Zahlung in diesem Monat: aufklappbar, damit z. B. für 2025 tatsächliche Beträge nachgetragen werden können
+  const fallig = posten.length;
+  for (const b of bs) for (const p of positionen(b)) if ((p.intervall || 'monat') !== 'einmalig' && !posten.some(x => x.p.id === p.id)) posten.push({ b, p, z: 0 });
+  posten.slice(fallig).sort((a, c) => a.b.name.localeCompare(c.b.name) || a.p.name.localeCompare(c.p.name)).forEach((x, k) => { posten[fallig + k] = x; });
   const zeile = (x, i) => { const reg = VORLAGEN.kosten.zahlung(x.p, ym, true); const anders = x.p.abweichungen?.[ym] != null;
     return `<div class="mon-row"><span class="t">${esc(x.p.name)}<small>${esc(x.b.name)}${anders ? ' · regulär ' + fEur(reg) : ''}</small></span>
-      <input inputmode="decimal" data-i="${i}" value="${fEin(x.z)}" class="${anders ? 'anders' : ''}" aria-label="Betrag ${esc(x.p.name)}" autocomplete="off">
+      <input inputmode="decimal" data-i="${i}" value="${x.z || anders ? fEin(x.z) : ''}" placeholder="0" class="${anders ? 'anders' : ''}" aria-label="Betrag ${esc(x.p.name)}" autocomplete="off">
       ${anders ? `<button type="button" class="x" data-act="reset" data-i="${i}" title="auf regulär zurücksetzen" aria-label="zurücksetzen">↺</button>` : '<span></span>'}</div>`; };
   $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${fYm(ym, true)}</h2>
-    <div class="mon-sum"><span>${posten.length} Zahlung${posten.length === 1 ? '' : 'en'} · Ø ${fEur0(avg)}</span><b class="num">${fEur(mo.summe)}</b></div>
-    <div>${posten.map(zeile).join('') || '<p class="muted">In diesem Monat ist nichts fällig.</p>'}</div>
+    <div class="mon-sum"><span>${fallig} Zahlung${fallig === 1 ? '' : 'en'} · Ø ${fEur0(avg)}</span><b class="num">${fEur(mo.summe)}</b></div>
+    ${vorbei ? '<p class="muted" style="font-size:13px;margin:0">Vergangener Monat: trag hier ein, was tatsächlich bezahlt wurde.</p>' : ''}
+    <div>${posten.slice(0, fallig).map(zeile).join('') || '<p class="muted">In diesem Monat ist nichts fällig.</p>'}</div>
+    ${posten.length > fallig ? `<details${fallig ? '' : ' open'}><summary class="muted" style="font-size:13px;cursor:pointer">Weitere Posten (${posten.length - fallig}), in diesem Monat ohne Zahlung</summary>${posten.slice(fallig).map((x, k) => zeile(x, fallig + k)).join('')}</details>` : ''}
     <div class="field"><span>Einmalige Ausgabe in diesem Monat</span><div class="mon-add">
       <input name="einName" placeholder="z. B. Geburtstag Oma, Reparatur" autocomplete="off"><input name="einBetrag" inputmode="decimal" placeholder="€" autocomplete="off">
       ${bs.length > 1 ? `<select name="einB" aria-label="Baustein"><option value="">In welchen Baustein?</option>${bs.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>` : ''}</div></div>
@@ -978,6 +1121,10 @@ function oeffneBaustein(ber, bid) {
   $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${b ? 'Baustein bearbeiten' : 'Neuer Baustein in ' + BEREICHE[ber].name}</h2>
     <label class="field"><span>Name</span><input name="name" required value="${esc(b?.name || '')}" placeholder="${ber === 'kosten' ? 'z. B. Versicherungen' : 'z. B. ETF-Depot'}" autocomplete="off"></label>
     ${b ? '' : `<div class="field"><span>Vorlage</span><div class="typ">${vs.map(([k, v], i) => `<label><input type="radio" name="vorlage" value="${k}" ${i === 0 ? 'checked' : ''}><b>${v.name}</b><small>${v.info}</small></label>`).join('')}</div></div>`}
+    <div class="field"><span>Farbe</span><div class="farben">
+      <label title="automatisch"><input type="radio" name="farbe" value="" ${!b?.farbe ? 'checked' : ''} aria-label="automatisch"><span>A</span></label>
+      ${Object.entries(FARBWAHL).map(([k, n]) => `<label title="${n}"><input type="radio" name="farbe" value="${k}" ${b?.farbe === k ? 'checked' : ''} aria-label="${n}"><span style="background:var(--f-${k})"></span></label>`).join('')}
+    </div></div>
     <label class="field"><span>Notiz</span><textarea name="notiz">${esc(b?.notiz || '')}</textarea></label>
     <div class="sheet-foot">${b ? '<button type="button" class="btn danger left" data-act="bWeg">Baustein löschen</button>' : ''}<button type="button" class="btn" data-act="zu">Abbrechen</button><button class="btn primary">Speichern</button></div></form>`;
   const form = $dlg.firstChild;
@@ -988,8 +1135,9 @@ function oeffneBaustein(ber, bid) {
   };
   form.onsubmit = e => {
     e.preventDefault(); const fd = new FormData(form); $dlg.close();
-    if (b) aendern(() => { b.name = fd.get('name').trim(); b.notiz = fd.get('notiz').trim(); });
-    else { const id = uid(); aendern(() => { S.bausteine[id] = { id, vorlage: fd.get('vorlage'), name: fd.get('name').trim(), notiz: fd.get('notiz').trim(), positionen: {}, reihe: Object.keys(S.bausteine).length }; }); location.hash = '#/b/' + id; }
+    const farbe = fd.get('farbe') || undefined;
+    if (b) aendern(() => { b.name = fd.get('name').trim(); b.notiz = fd.get('notiz').trim(); if (farbe) b.farbe = farbe; else delete b.farbe; });
+    else { const id = uid(); aendern(() => { S.bausteine[id] = { id, vorlage: fd.get('vorlage'), name: fd.get('name').trim(), farbe, notiz: fd.get('notiz').trim(), positionen: {}, reihe: Object.keys(S.bausteine).length }; }); location.hash = '#/b/' + id; }
   };
   $dlg.showModal();
 }
@@ -1127,13 +1275,18 @@ document.addEventListener('click', e => {
   if (a === 'pos') oeffnePosition(bid, el.dataset.id);
   if (a === 'monat') oeffneMonat(el.dataset.ym);
   if (a === 'kurse') oeffneKurse(bid);
+  if (a === 'tabelle') tabelleEinspielen(document.querySelector('[data-imp]').value);
+  if (a === 'startKosten') aendern(() => { const da = bausteineVon('kosten').map(b => b.name.trim().toLowerCase()); STARTKOSTEN.filter(([n]) => !da.includes(n.toLowerCase())).forEach(([name, farbe], i) => { const id = uid(); S.bausteine[id] = { id, vorlage: 'kosten', name, farbe, notiz: '', positionen: {}, reihe: Object.keys(S.bausteine).length + i }; }); });
   if (a === 'startVermoegen') aendern(() => { STARTVERMOEGEN.forEach(([vorlage, name], i) => { const id = uid(); S.bausteine[id] = { id, vorlage, name, notiz: '', positionen: {}, reihe: Object.keys(S.bausteine).length + i }; }); });
   if (a === 'personWeg' && confirm('Person entfernen? Ihre Positionen bleiben erhalten und zählen dann zu „Familie“.')) aendern(() => { S.personen = S.personen.filter(p => p.id !== el.dataset.id); for (const b of Object.values(S.bausteine)) for (const p of Object.values(b.positionen || {})) if (p.person === el.dataset.id) delete p.person; if (personFilter === el.dataset.id) personFilter = ''; });
   if (a === 'export') exportieren();
   if (a === 'demo' && confirm('Beispieldaten laden? Die Daten auf diesem Gerät werden ersetzt.')) { aendern(() => { S = beispiel(); }); location.hash = '#/'; }
   if (a === 'allesWeg' && confirm('Wirklich alle Daten des Dashboards auf diesem Gerät löschen? Das Sammelkarten-Depot bleibt erhalten. Vorher am besten ein Backup exportieren.')) aendern(() => { S = leer(); personFilter = ''; });
 });
-document.addEventListener('change', e => { if (e.target.dataset.act === 'import' && e.target.files[0]) { importieren(e.target.files[0]); e.target.value = ''; } });
+document.addEventListener('change', e => {
+  if (e.target.dataset.act === 'import' && e.target.files[0]) { importieren(e.target.files[0]); e.target.value = ''; }
+  if (e.target.dataset.act === 'tabelleDatei' && e.target.files[0]) { e.target.files[0].text().then(tabelleEinspielen); e.target.value = ''; }
+});
 document.addEventListener('submit', e => {
   if (e.target.dataset.form === 'person') { e.preventDefault(); const n = new FormData(e.target).get('name').trim(); if (n) aendern(() => S.personen.push({ id: uid(), name: n })); }
 });
