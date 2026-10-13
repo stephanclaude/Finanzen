@@ -77,6 +77,9 @@ a { color: var(--accent); }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-block: 6px 14px; }
 .brand { display: flex; align-items: baseline; gap: 10px; }
 .brand h1 { font-size: 1.35rem; }
+/* Zurück ins Finanzen-Dashboard, in dem das Depot als Baustein eingerechnet ist */
+.home { align-self: center; display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px 5px 8px; font-size: 14px; font-weight: 500; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.home:hover { border-color: var(--accent); }
 .conn { font-size: 12px; color: var(--muted); }
 .tabs { display: flex; gap: 4px; background: var(--sunk); padding: 4px; border-radius: 999px; }
 .tabs button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-weight: 500; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
@@ -180,7 +183,7 @@ a { color: var(--accent); }
 
 <div class="wrap">
   <header class="top">
-    <div class="brand"><h1>Sammelkarten-Depot</h1><span class="conn" id="conn">lädt …</span></div>
+    <div class="brand"><a class="home" href="../#/b/sammelkarten" aria-label="Zurück zu Finanzen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Finanzen</a><h1>Sammelkarten-Depot</h1><span class="conn" id="conn">lädt …</span></div>
     <nav class="tabs" role="tablist">
       <button role="tab" id="tab-depot" data-tab="depot" aria-selected="true">Depot</button>
       <button role="tab" id="tab-pflege" data-tab="pflege" aria-selected="false">Wochenpflege <span class="badge" id="due-badge" hidden>0</span></button>

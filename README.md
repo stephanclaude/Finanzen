@@ -19,13 +19,16 @@ Vorhandene Vorlagen:
 | Stand-Verlauf | Vermögen | Konten, Depots, Vorsorge: ab und zu den Stand eintragen |
 | Kurs × Stück | Vermögen | ETFs, Aktien, Münzen: Stückzahl, Einstand und Kurs, Link zur Kursseite, „Kurse aktualisieren“ für alle Positionen auf einmal (gleiche Kennung = gleicher Kurs) |
 | Immobilie & Kredite | Vermögen | Wert der Immobilie minus Restschuld der Kredite; die Restschuld wird aus Zinssatz und Rate Monat für Monat weitergerechnet |
+| Sammelkarten-Depot | Vermögen | erscheint automatisch als Baustein „Sammelkarten“, sobald das Depot unter tcg/ Positionen hat; Wert, Einsatz und Verlauf werden aus dessen Daten gelesen, gepflegt wird dort |
 | Kostenliste | Laufende Kosten | Kredite, Versicherungen, Abos, Lebensmittel, Feste … mit Betrag, Rhythmus (monatlich bis jährlich oder einmalig), Fälligkeit, Ende, Kündigungstermin |
 
 **Monatsplanung (Laufende Kosten):** Die App rechnet für die nächsten 12 Monate aus, was in jedem Monat tatsächlich fällig ist, z. B. die Jahresrate im Dezember. Teure Monate sind orange markiert und erscheinen als Hinweis auf dem Dashboard. Tippen auf einen Monat zeigt jede Zahlung; Beträge lassen sich nur für diesen Monat ändern (z. B. Lebensmittel im Dezember 900 statt 650 €), und einmalige Ausgaben lassen sich ergänzen. Die Kennzahl „Ø/Monat“ ist der Schnitt dieser 12 Monate.
 
+Unter **Vermögen** zeigt eine Torte „Wo liegt wie viel“ mit Betrag und Anteil je Baustein (antippen zeigt den Wert, die Legende führt zum Baustein). Oben links führt ein Zurück-Knopf immer eine Ebene hinauf, auch aus dem Sammelkarten-Depot zurück ins Dashboard.
+
 Bei leerem Vermögen legt „Unsere Bausteine anlegen“ Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus und Eigentumshaus an.
 
-Weitere Funktionen: Familienmitglieder (voreingestellt: Stephan, Vicky, Kids) mit Filter „wem gehört's“, Posten zwischen Bausteinen verschieben, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON (Export/Import), Beispieldaten zum Ausprobieren.
+Weitere Funktionen: Familienmitglieder (voreingestellt: Stephan, Vicky, Kids) mit Filter „wem gehört's“, Posten zwischen Bausteinen verschieben, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON inklusive Sammelkarten-Depot (Export/Import; alte Depot-Backups werden ebenfalls angenommen), Beispieldaten zum Ausprobieren.
 
 ## Dateien
 
@@ -34,7 +37,7 @@ Weitere Funktionen: Familienmitglieder (voreingestellt: Stephan, Vicky, Kids) mi
 | index.html | das Dashboard (komplette App) |
 | sw.js | Offline-Cache |
 | manifest.webmanifest, icon*.png, icon.svg | Installation als App |
-| tcg/ | das Sammelkarten-Depot, unverändert; wird als Baustein unter Vermögen eingebunden |
+| tcg/ | das Sammelkarten-Depot mit eigenem Speicher; als Baustein unter Vermögen eingerechnet |
 
 ## Installation
 

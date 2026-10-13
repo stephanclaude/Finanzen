@@ -185,12 +185,43 @@ dialog::backdrop { background: rgb(10 15 20 / .45); }
 .inline input { flex: 1; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 10px; min-width: 0; }
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 14px; z-index: 50; max-width: calc(100vw - 32px); }
 @media (max-width: 480px) { .two { grid-template-columns: 1fr; } .card { padding: 16px; } }
+
+/* Zurück zur übergeordneten Ebene (installierte App hat keine Browser-Leiste) */
+.top-l { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.back { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px 6px 8px; font-size: 14px; font-weight: 500; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.back:hover { border-color: var(--accent); }
+@media (max-width: 400px) { .top-l .brand h1 { font-size: 1.1rem; } }
+
+/* Aufteilung des Vermögens (Torte). Farben: geprüfte Kategorie-Palette, feste Reihenfolge je Baustein */
+:root { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948; --s0: #8C96A0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; --s0: #6B7682; } }
+:root[data-theme="dark"] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; --s0: #6B7682; }
+.split { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: center; }
+@media (max-width: 520px) { .split { grid-template-columns: 1fr; justify-items: center; } .split .leg { width: 100%; } }
+.donut { position: relative; width: 200px; height: 200px; }
+.donut svg { display: block; width: 100%; height: 100%; }
+.donut path { stroke: var(--surface); stroke-width: 2; stroke-linejoin: round; cursor: pointer; transition: opacity .15s; }
+.donut[data-aktiv] path:not([data-aktiv]) { opacity: .35; }
+.donut .mitte { position: absolute; inset: 50px; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.donut .mitte b { font-family: var(--font-num); font-weight: 500; font-size: 15px; }
+.donut .mitte span { font-size: 12px; color: var(--muted); overflow-wrap: break-word; hyphens: auto; }
+.leg { display: grid; gap: 2px; }
+.leg a { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 3.2em; gap: 10px; align-items: center; padding: 6px 4px; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 14px; }
+.leg a:hover, .leg a[data-aktiv] { background: var(--sunk); }
+.leg i { width: 12px; height: 12px; border-radius: 3px; }
+.leg .n { min-width: 0; overflow-wrap: anywhere; }
+.leg .v { font-family: var(--font-num); text-align: right; }
+.leg .p { font-family: var(--font-num); text-align: right; color: var(--muted); font-size: 13px; }
+.leg-note { font-size: 12px; color: var(--muted); margin: 6px 4px 0; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <a class="brand" href="#/"><h1>Finanzen</h1></a>
+    <div class="top-l">
+      <a class="back" id="zurueck" href="#/" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span></span></a>
+      <a class="brand" href="#/"><h1>Finanzen</h1></a>
+    </div>
     <a class="iconbtn" href="#/einstellungen" aria-label="Einstellungen" title="Einstellungen">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </a>
@@ -272,6 +303,13 @@ function restschuld(p, d) {
   for (let i = 0, n = ymDiff(l.d.slice(0, 7), d.slice(0, 7)); i < n && r > 0; i++) r = Math.max(0, r * (1 + z) - rate);
   return r;
 }
+// Sammelkarten-Depot (tcg/): gleiche Regeln wie dort. Wert = letzter Preis × Menge; Abgänge (verkauft, geöffnet, gedraftet) zählen ab ihrem Datum nicht mehr
+const TCG_ABGANG = { verkauft: 'verkauf', geoeffnet: 'geoeffnet', gedraftet: 'gedraftet' };
+const tcgPreise = p => Object.entries(p.preise || {}).filter(([, v]) => typeof v === 'number' && isFinite(v)).sort((a, b) => a[0] < b[0] ? -1 : 1);
+const tcgPreis = (p, d) => { let r = null; for (const [k, v] of tcgPreise(p)) if (!d || k <= d) r = { d: k, v }; return r; };
+const tcgMenge = p => typeof p.menge === 'number' && p.menge > 0 ? p.menge : 1;
+const tcgEinsatz = p => (typeof p.einstand === 'number' ? p.einstand : tcgPreise(p)[0]?.[1] ?? 0) * tcgMenge(p);
+const tcgWeg = (p, d) => { const k = TCG_ABGANG[p.status]; if (!k) return false; const g = p[k]?.datum; if (g) return g <= d; const l = tcgPreis(p); return !l || d > l.d; };
 const personName = id => S.personen.find(p => p.id === id)?.name || '';
 const diff = (v, alt, fmt = fEur) => {
   if (alt == null) return '';
@@ -366,6 +404,15 @@ const VORLAGEN = {
       return `<span>Wert <b>${fEur0(w)}</b></span><span>Kredite <b class="loss">−${fEur0(k)}</b></span>`; },
     hinweise(p) { if (p.art !== 'kredit') return []; const l = letzter(p.werte); if (!l) return ['noch keine Restschuld eingetragen']; return -tageBis(l.d) > 365 ? ['Restschuld seit über einem Jahr nicht mit der Bank abgeglichen'] : []; },
   },
+  // Liest die Daten des Sammelkarten-Depots nur mit; gepflegt wird dort (tcg/)
+  tcg: {
+    bereich: 'vermoegen', name: 'Sammelkarten-Depot', extern: true,
+    posWort: 'Position', posMehr: 'Positionen', felder: [],
+    wert(p, d) { if (tcgWeg(p, d)) return 0; const l = tcgPreis(p, d); return l ? l.v * tcgMenge(p) : 0; },
+    daten: p => Object.keys(p.preise || {}),
+    zeile: () => ({ meta: '', sub: '' }),
+    hinweise: () => [],
+  },
   kosten: {
     bereich: 'kosten', name: 'Kostenliste',
     info: 'Kredite, Versicherungen, Abos, Handy, Auto, Lebensmittel, Feste … Betrag, Rhythmus und Fälligkeit. Die App plant daraus jeden Monat.',
@@ -408,14 +455,20 @@ const VORLAGEN = {
   },
 };
 
-// Stephans Vermögensbausteine (12.10.2026); Sammelkarten kommen als eigener Baustein dazu
+// Stephans Vermögensbausteine (12.10.2026); Sammelkarten kommen automatisch aus dem Sammelkarten-Depot dazu
 const STARTVERMOEGEN = [['stand', 'Sparkonto'], ['kurs', 'ETF-/Wertpapierdepot'], ['stand', 'Altersvorsorge'], ['kurs', 'Edelmetalle'], ['stand', 'Investitionen am/im Haus'], ['immobilie', 'Eigentumshaus']];
 
 /* ───────────── Berechnung: alles hängt an „Wert einer Position am Stichtag“ ───────────── */
 let personFilter = pref.get('person', '');
 let zeitraum = pref.get('zeitraum', '12');
 const positionen = b => Object.entries(b.positionen || {}).map(([id, p]) => ({ id, ...p })).filter(p => !personFilter || p.person === personFilter);
-const bausteineVon = ber => Object.values(S.bausteine).filter(b => VORLAGEN[b.vorlage]?.bereich === ber).sort((a, b) => (a.reihe ?? 0) - (b.reihe ?? 0) || a.name.localeCompare(b.name));
+// Das Sammelkarten-Depot erscheint als Baustein, sobald es Positionen hat (eigener Speicher unter tcg/)
+let TCG = null, TCGB = null;
+const TCG_ID = 'sammelkarten';
+const tcgBaustein = () => TCG && Object.keys(TCG.positionen || {}).length ? { id: TCG_ID, vorlage: 'tcg', name: 'Sammelkarten', notiz: '', positionen: TCG.positionen, reihe: 999 } : null;
+const baustein = id => id === TCG_ID ? TCGB : S.bausteine[id];
+const alleBausteine = () => TCGB ? [...Object.values(S.bausteine), TCGB] : Object.values(S.bausteine);
+const bausteineVon = ber => alleBausteine().filter(b => VORLAGEN[b.vorlage]?.bereich === ber).sort((a, b) => (a.reihe ?? 0) - (b.reihe ?? 0) || a.name.localeCompare(b.name));
 const bausteinWert = (b, d = heute()) => { const v = VORLAGEN[b.vorlage]; return positionen(b).reduce((s, p) => s + (v.wert(p, d) || 0), 0); };
 const bereichWert = (ber, d = heute()) => bausteineVon(ber).reduce((s, b) => s + bausteinWert(b, d), 0);
 const monatsende = d => { const x = new Date(d + 'T12:00:00'); return new Date(x.getFullYear(), x.getMonth() + 1, 0, 12).toISOString().slice(0, 10); };
@@ -458,6 +511,7 @@ function chartHtml(pts, fmt) {
 }
 function zeichneCharts() {
   document.querySelectorAll('.chart[data-bars]').forEach(zeichneBalken);
+  zeichneTorten();
   document.querySelectorAll('.chart[data-chart]').forEach(el => {
     const pts = JSON.parse(el.dataset.chart); const fmt = el.dataset.fmt === 'm' ? v => fEur(v) + '/Monat' : fEur;
     const W = el.clientWidth || 300, H = el.clientHeight || 170, L = 46, R = 8, T = 10, B = 22;
@@ -528,6 +582,9 @@ function nice(v) { const p = 10 ** Math.floor(Math.log10(v)); const f = v / p; r
 /* ───────────── Ansichten ───────────── */
 const $view = document.getElementById('view'), $crumbs = document.getElementById('crumbs');
 function crumbs(teile) {
+  const z = document.getElementById('zurueck'), eltern = teile.length > 1 ? teile.at(-2) : null;
+  z.hidden = !eltern;
+  if (eltern) { z.href = eltern[1]; z.lastChild.textContent = eltern[0]; z.setAttribute('aria-label', 'Zurück zu ' + eltern[0]); }
   $crumbs.innerHTML = teile.map((t, i) => i === teile.length - 1 ? `<span class="cur">${esc(t[0])}</span>` : `<a href="${t[1]}">${esc(t[0])}</a><span class="sep">›</span>`).join('');
 }
 function filterzeile(mitZeitraum = true) {
@@ -580,14 +637,67 @@ function viewBereich(ber) {
     <div class="big">${fEur0(gesamt)}</div>
     <div class="figs">${bs.length ? `<span>${diff(gesamt, alt)}</span>` : ''}</div>
     ${chartHtml(verlauf(bs, d => bereichWert(ber, d)), 'e')}`;
+  const eigene = bs.filter(b => !VORLAGEN[b.vorlage].extern).length;
+  const start = m || eigene ? '' : `<div class="empty">${bs.length ? 'Noch keine eigenen Vermögensbausteine.' : B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startVermoegen">Unsere Bausteine anlegen</button></div><small>Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus, Eigentumshaus</small></div>`;
   return filterzeile(!m) + `
   <section class="card">${kopf}</section>
+  ${m ? '' : aufteilung(ber)}
   <section class="list">
     <div class="list-head"><h2>Bausteine</h2><button class="btn small primary" data-act="neuBaustein" data-bereich="${ber}">+ Baustein</button></div>
-    ${zeilen || (m ? `<div class="empty">${B.leer}</div>` : `<div class="empty">${B.leer}<div class="actions" style="justify-content:center"><button class="btn primary" data-act="startVermoegen">Unsere Bausteine anlegen</button></div><small>Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus, Eigentumshaus</small></div>`)}
-    ${m ? '' : `<a class="row" href="tcg/"><span class="name">Sammelkarten-Depot</span><span class="val muted">öffnen ›</span><span class="meta">läuft noch eigenständig, wird bald hier eingerechnet</span></a>`}
+    ${zeilen}${start}${!zeilen && m ? `<div class="empty">${B.leer}</div>` : ''}
   </section>
   ${m && bs.length ? monatsListe(pl, avg) : ''}`;
+}
+
+// Wo liegt wie viel: Torte mit Legende. Farbe folgt dem Baustein (feste Reihenfolge), nicht seinem Rang.
+const FARBEN = 8;
+function aufteilung(ber) {
+  const alle = bausteineVon(ber), farbe = new Map(alle.map((b, i) => [b.id, i < FARBEN ? `var(--s${i + 1})` : 'var(--s0)']));
+  const werte = alle.map(b => ({ b, w: bausteinWert(b) }));
+  const pos = werte.filter(x => x.w > 0.5).sort((a, c) => c.w - a.w), neg = werte.filter(x => x.w < -0.5);
+  const summe = pos.reduce((s, x) => s + x.w, 0);
+  if (!pos.length) return '';
+  const R = 96, r = 60, C = 100;
+  const pt = (a, rad) => `${(C + rad * Math.sin(a)).toFixed(2)},${(C - rad * Math.cos(a)).toFixed(2)}`;
+  let a0 = 0;
+  const teile = pos.map((x, i) => {
+    const anteil = x.w / summe, a1 = a0 + anteil * 2 * Math.PI, gross = anteil > 0.5 ? 1 : 0;
+    // ein einzelner Baustein (100 %) braucht zwei Halbkreise
+    const d = anteil > 0.9999 ? `M${pt(0, R)}A${R},${R} 0 1 1 ${pt(Math.PI, R)}A${R},${R} 0 1 1 ${pt(0, R)}ZM${pt(0, r)}A${r},${r} 0 1 0 ${pt(Math.PI, r)}A${r},${r} 0 1 0 ${pt(0, r)}Z`
+      : `M${pt(a0, R)}A${R},${R} 0 ${gross} 1 ${pt(a1, R)}L${pt(a1, r)}A${r},${r} 0 ${gross} 0 ${pt(a0, r)}Z`;
+    a0 = a1;
+    return `<path d="${d}" fill="${farbe.get(x.b.id)}" fill-rule="evenodd" data-i="${i}"/>`;
+  }).join('');
+  const prozent = w => (w / summe * 100).toLocaleString('de-AT', { maximumFractionDigits: w / summe < 0.1 ? 1 : 0 }) + ' %';
+  const info = pos.map(x => ({ n: x.b.name, w: fEur0(x.w), p: prozent(x.w) }));
+  return `<section class="card">
+    <div class="card-head"><h2>Wo liegt wie viel</h2></div>
+    <div class="split">
+      <div class="donut" data-torte='${esc(JSON.stringify(info))}' data-summe="${esc(fEur0(summe))}" role="img" aria-label="Aufteilung des Vermögens nach Bausteinen">
+        <svg viewBox="0 0 200 200">${teile}</svg>
+        <div class="mitte"><b>${fEur0(summe)}</b><span>${pos.length} Bausteine</span></div>
+      </div>
+      <div class="leg">${pos.map((x, i) => `<a href="#/b/${x.b.id}" data-i="${i}"><i style="background:${farbe.get(x.b.id)}"></i><span class="n">${esc(x.b.name)}</span><span class="v">${fEur0(x.w)}</span><span class="p">${prozent(x.w)}</span></a>`).join('')}</div>
+    </div>
+    ${neg.length ? `<p class="leg-note">Nicht in der Torte, weil negativ: ${neg.map(x => `${esc(x.b.name)} ${fEur0(x.w)}`).join(', ')}. In der Summe oben ist es enthalten.</p>` : ''}
+  </section>`;
+}
+function zeichneTorten() {
+  document.querySelectorAll('.donut[data-torte]').forEach(el => {
+    const info = JSON.parse(el.dataset.torte), mitte = el.querySelector('.mitte'), leg = el.parentNode.querySelector('.leg');
+    const setze = i => {
+      el.toggleAttribute('data-aktiv', i != null);
+      el.querySelectorAll('path').forEach(p => p.toggleAttribute('data-aktiv', p.dataset.i == i));
+      leg?.querySelectorAll('a').forEach(a => a.toggleAttribute('data-aktiv', a.dataset.i == i));
+      mitte.innerHTML = ''; const b = document.createElement('b'), sp = document.createElement('span');
+      if (i == null) { b.textContent = el.dataset.summe; sp.textContent = info.length + ' Bausteine'; }
+      else { b.textContent = info[i].w; sp.textContent = `${info[i].n} · ${info[i].p}`; }
+      mitte.append(b, sp);
+    };
+    el.querySelectorAll('path').forEach(p => { p.addEventListener('pointerenter', () => setze(p.dataset.i)); p.addEventListener('pointerdown', () => setze(p.dataset.i)); });
+    el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') setze(null); });
+    leg?.querySelectorAll('a').forEach(a => { a.addEventListener('pointerenter', () => setze(a.dataset.i)); a.addEventListener('pointerleave', () => setze(null)); });
+  });
 }
 
 function monatsListe(pl, avg) {
@@ -598,8 +708,9 @@ function monatsListe(pl, avg) {
 }
 
 function viewBaustein(id) {
-  const b = S.bausteine[id]; if (!b) { location.hash = '#/'; return ''; }
+  const b = baustein(id); if (!b) { location.hash = '#/'; return ''; }
   const V = VORLAGEN[b.vorlage], ber = V.bereich, B = BEREICHE[ber], m = ber === 'kosten';
+  if (V.extern) return viewSammelkarten(b);
   crumbs([['Dashboard', '#/'], [B.name, '#/' + ber], [b.name]]);
   const ps = positionen(b); const w = bausteinWert(b);
   const zeilen = ps.map(p => ({ p, w: V.wert(p, heute()) })).sort((a, c) => c.w - a.w || a.p.name.localeCompare(c.p.name)).map(({ p, w: pw }) => {
@@ -621,6 +732,36 @@ function viewBaustein(id) {
   ${b.notiz ? `<p class="muted" style="font-size:13px;margin:10px 4px">${esc(b.notiz)}</p>` : ''}`;
 }
 
+// Ebene 3 für das Sammelkarten-Depot: Überblick hier, gepflegt wird in der gewohnten Depot-Ansicht
+function viewSammelkarten(b) {
+  crumbs([['Dashboard', '#/'], ['Vermögen', '#/vermoegen'], [b.name]]);
+  const h = heute(), V = VORLAGEN.tcg, ps = positionen(b), bestand = ps.filter(p => !tcgWeg(p, h));
+  const w = bausteinWert(b), e = bestand.reduce((s, p) => s + tcgEinsatz(p), 0);
+  const x = new Date(), montag = new Date(x.getFullYear(), x.getMonth(), x.getDate() - (x.getDay() + 6) % 7, 12).toISOString().slice(0, 10);
+  const faellig = bestand.filter(p => { const l = tcgPreis(p); return !l || l.d < (p.intervall === 'monat' ? h.slice(0, 8) + '01' : montag); }).length;
+  const letzt = bestand.map(p => tcgPreis(p)?.d).filter(Boolean).sort().at(-1);
+  const kats = [['sealed', 'Sealed'], ['single', 'Singles'], ['collection', 'Collections']];
+  const gruppen = kats.map(([k, l]) => [l, bestand.filter(p => p.kat === k)]).concat([['Sonstige', bestand.filter(p => !kats.some(([k]) => k === p.kat))]]).filter(g => g[1].length);
+  const zeilen = gruppen.map(([l, xs]) => {
+    const kw = xs.reduce((s, p) => s + V.wert(p, h), 0), ke = xs.reduce((s, p) => s + tcgEinsatz(p), 0), anteil = w > 0 ? Math.max(0, kw / w * 100) : 0;
+    return `<a class="row" href="tcg/"><span class="name">${l}</span><span class="val">${fEur(kw)}</span>
+      <span class="meta">${xs.length} ${xs.length === 1 ? 'Position' : 'Positionen'} · Einsatz ${fEur0(ke)}</span><span class="sub ${kw >= ke ? 'gain' : 'loss'}">${gv(kw, ke)}</span>
+      <span class="share"><span style="width:${anteil.toFixed(1)}%"></span></span></a>`;
+  }).join('');
+  return filterzeile() + (personFilter ? `<div class="empty solo">Das Sammelkarten-Depot gehört der ganzen Familie. Wähle oben „Alle“.</div>` : `
+  <section class="card">
+    <div class="card-head"><div class="lab">${esc(b.name)}</div><a class="btn small primary" href="tcg/">Depot öffnen ›</a></div>
+    <div class="big">${fEur0(w)}</div>
+    <div class="figs"><span>Einsatz <b>${fEur0(e)}</b></span>${e ? `<span class="${w >= e ? 'gain' : 'loss'}">${gv(w, e)}</span>` : ''}<span>${diff(w, bausteinWert(b, vormonatsende()))}</span></div>
+    ${chartHtml(verlauf([b], d => bausteinWert(b, d)), 'e')}
+  </section>
+  <section class="list">
+    <div class="list-head"><h2>Kategorien</h2><span class="muted" style="font-size:13px">${letzt ? 'letzter Preis ' + fDatum(letzt) : ''}</span></div>
+    ${zeilen || '<div class="empty">Keine Positionen im Bestand.</div>'}
+    <a class="row" href="tcg/"><span class="name">Sammelkarten-Depot öffnen</span><span class="val">›</span><span class="meta">Positionen anlegen, Preise eintragen, verkaufen: alles wie gewohnt${faellig ? ` · <b class="warn">${faellig} Preis${faellig === 1 ? '' : 'e'} in der Wochenpflege fällig</b>` : ''}</span></a>
+  </section>`);
+}
+
 function viewEinstellungen() {
   crumbs([['Dashboard', '#/'], ['Einstellungen']]);
   const anzahl = Object.values(S.bausteine).reduce((s, b) => s + Object.keys(b.positionen || {}).length, 0);
@@ -635,11 +776,11 @@ function viewEinstellungen() {
     <h2>Sicherung</h2>
     <p>Alle Daten liegen nur auf diesem Gerät (${Object.keys(S.bausteine).length} Bausteine, ${anzahl} Positionen). Abgleich zwischen iPhone und PC: hier exportieren, auf dem anderen Gerät importieren, z. B. über iCloud Drive.</p>
     <div class="actions" style="margin:0"><button class="btn primary" data-act="export">Backup exportieren</button><label class="btn">Backup importieren<input type="file" accept="application/json,.json" data-act="import" hidden></label></div>
-    <p>Ein Backup des Sammelkarten-Depots kannst du hier ebenfalls importieren, es landet dann im Depot.</p>
+    <p>Ein Backup enthält alles, auch das Sammelkarten-Depot. Ein altes Backup aus dem Sammelkarten-Depot kannst du hier ebenfalls importieren.</p>
   </section>
   <section class="section">
     <h2>Sammelkarten-Depot</h2>
-    <p>Läuft vorerst noch eigenständig und wird als nächstes als Baustein unter Vermögen eingebunden.</p>
+    <p>${TCGB ? `Ist als Baustein „Sammelkarten“ unter Vermögen eingerechnet (${Object.keys(TCG.positionen).length} Positionen).` : 'Erscheint als Baustein „Sammelkarten“ unter Vermögen, sobald es Positionen hat.'} Gepflegt wird es wie gewohnt in der eigenen Ansicht. Das Backup oben enthält es mit.</p>
     <div class="actions" style="margin:0"><a class="btn" href="tcg/">Sammelkarten-Depot öffnen</a></div>
   </section>
   <section class="section">
@@ -820,7 +961,7 @@ function oeffneMonat(ym) {
 }
 function oeffneBaustein(ber, bid) {
   const b = bid ? S.bausteine[bid] : null;
-  const vs = Object.entries(VORLAGEN).filter(([, v]) => v.bereich === ber);
+  const vs = Object.entries(VORLAGEN).filter(([, v]) => v.bereich === ber && !v.extern);
   $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${b ? 'Baustein bearbeiten' : 'Neuer Baustein in ' + BEREICHE[ber].name}</h2>
     <label class="field"><span>Name</span><input name="name" required value="${esc(b?.name || '')}" placeholder="${ber === 'kosten' ? 'z. B. Versicherungen' : 'z. B. ETF-Depot'}" autocomplete="off"></label>
     ${b ? '' : `<div class="field"><span>Vorlage</span><div class="typ">${vs.map(([k, v], i) => `<label><input type="radio" name="vorlage" value="${k}" ${i === 0 ? 'checked' : ''}><b>${v.name}</b><small>${v.info}</small></label>`).join('')}</div></div>`}
@@ -843,37 +984,48 @@ function oeffneBaustein(ber, bid) {
 /* ───────────── Sicherung ───────────── */
 async function exportieren() {
   const name = `Finanzen ${heute()}.json`;
-  const blob = new Blob([JSON.stringify({ app: 'finanzen', version: 1, exportiert: new Date().toISOString(), daten: S }, null, 1)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ app: 'finanzen', version: 1, exportiert: new Date().toISOString(), daten: S, ...(TCG ? { sammelkarten: TCG } : {}) }, null, 1)], { type: 'application/json' });
   const file = new File([blob], name, { type: 'application/json' });
   if (navigator.canShare?.({ files: [file] }) && /iPhone|iPad/.test(navigator.userAgent)) { try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-// Backup des Sammelkarten-Depots: landet im Speicher des Depots unter tcg/ (gleiche Adresse, gleicher Browser-Speicher)
-function tcgImport(j) {
+// Speicher des Sammelkarten-Depots unter tcg/ (gleiche Adresse, gleicher Browser-Speicher): Dashboard liest mit, Import schreibt hinein
+function tcgDb() {
+  return new Promise((res, rej) => {
+    try { const r = indexedDB.open('sammelkarten-depot', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+    catch (e) { rej(e); }
+  });
+}
+async function tcgLaden() {
+  try {
+    const db = await tcgDb();
+    TCG = await new Promise(res => { const t = db.transaction('kv').objectStore('kv').get('state'); t.onsuccess = () => res(t.result ?? null); t.onerror = () => res(null); });
+    db.close();
+  } catch { TCG = null; }
+  TCGB = tcgBaustein();
+}
+async function tcgSchreiben(state) {
+  const db = await tcgDb();
+  await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(state, 'state'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+  db.close(); TCG = state; TCGB = tcgBaustein();
+}
+// Altes Backup aus dem Sammelkarten-Depot (Liste mit id)
+async function tcgImport(j) {
   const list = Array.isArray(j) ? j : j?.positionen;
   if (!Array.isArray(list) || !list.length || list.some(p => !p || typeof p.name !== 'string')) return false;
-  if (!confirm(`Das ist ein Backup des Sammelkarten-Depots${j.exportiert ? ' vom ' + new Date(j.exportiert).toLocaleDateString('de-AT') : ''} mit ${list.length} Positionen. Ins Sammelkarten-Depot laden? Die Depotdaten auf diesem Gerät werden ersetzt.`)) return true;
-  const r = indexedDB.open('sammelkarten-depot', 1);
-  r.onupgradeneeded = () => r.result.createObjectStore('kv');
-  r.onerror = () => toast('Import fehlgeschlagen');
-  r.onsuccess = () => {
-    const db = r.result, tx = db.transaction('kv', 'readwrite'), st = tx.objectStore('kv');
-    const alt = st.get('state');
-    alt.onsuccess = () => {
-      const positionen = {}; for (const p of list) { const { id, ...rest } = p; positionen[id || uid()] = rest; }
-      st.put({ positionen, einstellungen: j.einstellungen || alt.result?.einstellungen || {} }, 'state');
-    };
-    tx.oncomplete = () => { db.close(); toast(`${list.length} Positionen ins Sammelkarten-Depot geladen`); setTimeout(() => { if (confirm('Sammelkarten-Depot jetzt öffnen?')) location.href = 'tcg/'; }, 400); };
-    tx.onerror = () => toast('Import fehlgeschlagen');
-  };
+  if (!confirm(`Das ist ein Backup des Sammelkarten-Depots${j.exportiert ? ' vom ' + new Date(j.exportiert).toLocaleDateString('de-AT') : ''} mit ${list.length} Positionen. Einlesen? Die Sammelkarten-Daten auf diesem Gerät werden ersetzt.`)) return true;
+  const positionen = {}; for (const p of list) { const { id, ...rest } = p; positionen[id || uid()] = rest; }
+  try { await tcgSchreiben({ positionen, einstellungen: j.einstellungen || TCG?.einstellungen || {} }); toast(`${list.length} Sammelkarten-Positionen eingelesen`); location.hash = '#/b/' + TCG_ID; render(); }
+  catch { toast('Import fehlgeschlagen'); }
   return true;
 }
 async function importieren(file) {
   try {
     const j = JSON.parse(await file.text());
-    if (j.app !== 'finanzen' || !j.daten?.bausteine) { if (!tcgImport(j)) toast('Diese Datei ist weder ein Finanzen- noch ein Sammelkarten-Backup'); return; }
-    const n = Object.keys(j.daten.bausteine).length;
-    if (!confirm(`Backup vom ${new Date(j.exportiert).toLocaleString('de-AT')} mit ${n} Bausteinen einlesen? Die Daten auf diesem Gerät werden ersetzt.`)) return;
+    if (j.app !== 'finanzen' || !j.daten?.bausteine) { if (!(await tcgImport(j))) toast('Diese Datei ist weder ein Finanzen- noch ein Sammelkarten-Backup'); return; }
+    const n = Object.keys(j.daten.bausteine).length, k = j.sammelkarten?.positionen ? Object.keys(j.sammelkarten.positionen).length : 0;
+    if (!confirm(`Backup vom ${new Date(j.exportiert).toLocaleString('de-AT')} mit ${n} Bausteinen${k ? ` und ${k} Sammelkarten-Positionen` : ''} einlesen? Die Daten auf diesem Gerät werden ersetzt.`)) return;
+    if (k) await tcgSchreiben(j.sammelkarten);
     await aendern(() => { S = Object.assign(leer(), j.daten); });
     toast('Backup eingelesen');
   } catch { toast('Datei konnte nicht gelesen werden'); }
@@ -958,7 +1110,7 @@ document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el || $dlg.contains(el)) return;
   const a = el.dataset.act, bid = location.hash.split('/')[2];
   if (a === 'neuBaustein') oeffneBaustein(el.dataset.bereich);
-  if (a === 'bausteinBearbeiten') oeffneBaustein(VORLAGEN[S.bausteine[bid].vorlage].bereich, bid);
+  if (a === 'bausteinBearbeiten' && S.bausteine[bid]) oeffneBaustein(VORLAGEN[S.bausteine[bid].vorlage].bereich, bid);
   if (a === 'pos') oeffnePosition(bid, el.dataset.id);
   if (a === 'monat') oeffneMonat(el.dataset.ym);
   if (a === 'kurse') oeffneKurse(bid);
@@ -966,7 +1118,7 @@ document.addEventListener('click', e => {
   if (a === 'personWeg' && confirm('Person entfernen? Ihre Positionen bleiben erhalten und zählen dann zu „Familie“.')) aendern(() => { S.personen = S.personen.filter(p => p.id !== el.dataset.id); for (const b of Object.values(S.bausteine)) for (const p of Object.values(b.positionen || {})) if (p.person === el.dataset.id) delete p.person; if (personFilter === el.dataset.id) personFilter = ''; });
   if (a === 'export') exportieren();
   if (a === 'demo' && confirm('Beispieldaten laden? Die Daten auf diesem Gerät werden ersetzt.')) { aendern(() => { S = beispiel(); }); location.hash = '#/'; }
-  if (a === 'allesWeg' && confirm('Wirklich alle Daten auf diesem Gerät löschen? Vorher am besten ein Backup exportieren.')) aendern(() => { S = leer(); personFilter = ''; });
+  if (a === 'allesWeg' && confirm('Wirklich alle Daten des Dashboards auf diesem Gerät löschen? Das Sammelkarten-Depot bleibt erhalten. Vorher am besten ein Backup exportieren.')) aendern(() => { S = leer(); personFilter = ''; });
 });
 document.addEventListener('change', e => { if (e.target.dataset.act === 'import' && e.target.files[0]) { importieren(e.target.files[0]); e.target.value = ''; } });
 document.addEventListener('submit', e => {
@@ -975,7 +1127,9 @@ document.addEventListener('submit', e => {
 window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 let rT; window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(zeichneCharts, 150); });
 
-laden().then(() => { if (personFilter && !S.personen.some(p => p.id === personFilter)) personFilter = ''; render(); });
+// Zurück aus dem Sammelkarten-Depot (Seite aus dem Verlauf): dessen Daten neu lesen
+window.addEventListener('pageshow', e => { if (e.persisted) tcgLaden().then(render); });
+Promise.all([laden(), tcgLaden()]).then(() => { if (personFilter && !S.personen.some(p => p.id === personFilter)) personFilter = ''; render(); });
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
