@@ -213,6 +213,10 @@ dialog::backdrop { background: rgb(10 15 20 / .45); }
 .lg-j { background: var(--accent); } .lg-v { background: var(--muted); opacity: .45; } .lg-p { background: var(--accent); opacity: .35; }
 .chart .seg { stroke: var(--surface); stroke-width: 1; }
 .chart .hochpkt { fill: var(--warn); }
+.pill { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 600; line-height: 18px; vertical-align: 1px; white-space: nowrap; }
+.check { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 14px; }
+.check input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.check:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .split { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: center; }
 @media (max-width: 520px) { .split { grid-template-columns: 1fr; justify-items: center; } .split .leg { width: 100%; } }
 .donut { position: relative; width: 200px; height: 200px; }
@@ -449,6 +453,7 @@ const VORLAGEN = {
       { k: 'intervall', l: 'Rhythmus', t: 'auswahl', optionen: Object.fromEntries(Object.entries(INTERVALLE).map(([k, v]) => [k, v[0]])), halb: true },
       { k: 'beginn', l: 'Fällig am (erste Zahlung, gern auch Jahre zurück)', t: 'datum', halb: true },
       { k: 'ende', l: 'Läuft bis (letzte Zahlung)', t: 'datum', halb: true },
+      { k: 'variabel', l: 'Variable Kosten: der Betrag schwankt (z. B. Drogerie, Tanken) und ist ein Schätzwert', t: 'haken' },
       { k: 'frist', l: 'Nächster Kündigungs- oder Verlängerungstermin', t: 'datum' },
       { k: 'abweichungen', l: 'Abweichungen einzelner Monate', t: 'abw' },
       { k: 'notiz', l: 'Notiz', t: 'notiz' },
@@ -481,6 +486,8 @@ const VORLAGEN = {
 
 // Stephans Vermögensbausteine (12.10.2026); Sammelkarten kommen automatisch aus dem Sammelkarten-Depot dazu
 // Stephans Kostenbausteine mit Farben (13.10.2026)
+// Kennzeichen für Posten mit schwankendem Betrag (Schätzwert)
+const VARIABEL = ' <span class="pill" title="Betrag schwankt, Schätzwert">variabel</span>';
 const STARTKOSTEN = [['Wohnen', 'dunkelgruen'], ['Haushalt', 'gruen'], ['Gesundheit', 'hellgruen'], ['Investment & Finanzen', 'braungruen'], ['Auto', 'orange'], ['Freizeit', 'magenta']];
 const STARTVERMOEGEN = [['stand', 'Sparkonto'], ['kurs', 'ETF-/Wertpapierdepot'], ['stand', 'Altersvorsorge'], ['kurs', 'Edelmetalle'], ['stand', 'Investitionen am/im Haus'], ['immobilie', 'Eigentumshaus']];
 
@@ -668,7 +675,7 @@ function viewBereich(ber) {
   const kopf = m ? `
     <div class="lab">Laufende Kosten · Planung</div>
     <div class="big">${fEur0(avg)}<small>Ø/Monat</small></div>
-    <div class="figs"><span>nächste 12 Monate <b>${fEur0(avg * 12)}</b></span><span>Tippe auf einen Monat zum Anpassen</span></div>
+    <div class="figs"><span>nächste 12 Monate <b>${fEur0(avg * 12)}</b></span>${(() => { const v = bs.reduce((s, b) => s + positionen(b).filter(p => p.variabel).reduce((t, p) => t + VORLAGEN.kosten.wert(p, heute()), 0), 0); return v ? `<span>davon variabel <b>${fEur0(v)}</b>/Monat</span>` : ''; })()}<span>Tippe auf einen Monat zum Anpassen</span></div>
     <div class="actions" style="margin:0"><a class="btn small" href="#/kosten/vergleich">Vergleich mit dem Vorjahr ›</a></div>
     ${balkenHtml(pl, true, farbe)}` : `
     <div class="lab">${B.name}</div>
@@ -864,7 +871,7 @@ function viewBaustein(id) {
   const ps = positionen(b); const w = bausteinWert(b);
   const zeilen = ps.map(p => ({ p, w: V.wert(p, heute()) })).sort((a, c) => c.w - a.w || a.p.name.localeCompare(c.p.name)).map(({ p, w: pw }) => {
     const z = V.zeile(p);
-    return `<button class="row" data-act="pos" data-id="${p.id}"><span class="name">${esc(p.name)}</span><span class="val ${z.valKl || ''}">${fEur(pw)}${m ? '<span class="muted"> Ø/M</span>' : ''}</span>
+    return `<button class="row" data-act="pos" data-id="${p.id}"><span class="name">${esc(p.name)}${p.variabel ? VARIABEL : ''}</span><span class="val ${z.valKl || ''}">${fEur(pw)}${m ? '<span class="muted"> Ø/M</span>' : ''}</span>
       <span class="meta">${esc(z.meta)}</span><span class="sub ${z.subKl || ''}">${esc(z.sub)}</span></button>`;
   }).join('');
   return filterzeile(!m) + `
@@ -969,6 +976,7 @@ function feldHtml(f, p) {
       <div data-klist></div></div></div>`; }
     case 'eur': return wrap(`<input name="${f.k}" inputmode="decimal" value="${fEin(v)}" ${f.pflicht ? 'required' : ''} autocomplete="off">`);
     case 'datum': return wrap(`<input name="${f.k}" type="date" value="${esc(v)}">`);
+    case 'haken': return `<label class="check"><input type="checkbox" name="${f.k}" ${v ? 'checked' : ''}><span>${f.l}</span></label>`;
     case 'notiz': return wrap(`<textarea name="${f.k}">${esc(v)}</textarea>`);
     case 'auswahl': return wrap(`<select name="${f.k}">${Object.entries(f.optionen).map(([k, l]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`);
     case 'person': return S.personen.length ? wrap(`<select name="${f.k}"><option value="">Familie / gemeinsam</option>${S.personen.map(x => `<option value="${x.id}" ${v === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`) : '';
@@ -1034,7 +1042,7 @@ function oeffnePosition(bid, pid) {
       if (f.t === 'kursstand') { neu[f.k] = staende; continue; }
       if (f.nur && fd.get('art') !== f.nur) continue;
       const raw = fd.get(f.k); if (raw == null) continue;
-      const val = f.t === 'eur' ? zahl(raw) : String(raw).trim();
+      const val = f.t === 'eur' ? zahl(raw) : f.t === 'haken' ? true : String(raw).trim();
       if (val !== '' && val != null) neu[f.k] = val;
     }
     $dlg.close();
@@ -1077,7 +1085,7 @@ function oeffneMonat(ym) {
   for (const b of bs) for (const p of positionen(b)) if ((p.intervall || 'monat') !== 'einmalig' && !posten.some(x => x.p.id === p.id)) posten.push({ b, p, z: 0 });
   posten.slice(fallig).sort((a, c) => a.b.name.localeCompare(c.b.name) || a.p.name.localeCompare(c.p.name)).forEach((x, k) => { posten[fallig + k] = x; });
   const zeile = (x, i) => { const reg = VORLAGEN.kosten.zahlung(x.p, ym, true); const anders = x.p.abweichungen?.[ym] != null;
-    return `<div class="mon-row"><span class="t">${esc(x.p.name)}<small>${esc(x.b.name)}${anders ? ' · regulär ' + fEur(reg) : ''}</small></span>
+    return `<div class="mon-row"><span class="t">${esc(x.p.name)}${x.p.variabel ? VARIABEL : ''}<small>${esc(x.b.name)}${anders ? ' · regulär ' + fEur(reg) : ''}</small></span>
       <input inputmode="decimal" data-i="${i}" value="${x.z || anders ? fEin(x.z) : ''}" placeholder="0" class="${anders ? 'anders' : ''}" aria-label="Betrag ${esc(x.p.name)}" autocomplete="off">
       ${anders ? `<button type="button" class="x" data-act="reset" data-i="${i}" title="auf regulär zurücksetzen" aria-label="zurücksetzen">↺</button>` : '<span></span>'}</div>`; };
   $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${fYm(ym, true)}</h2>
