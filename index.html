@@ -691,7 +691,8 @@ function viewBereich(ber) {
   const kopf = m ? `
     <div class="lab">Laufende Kosten · Planung</div>
     <div class="big">${fEur0(avg)}<small>Ø/Monat</small></div>
-    <div class="figs"><span>nächste 12 Monate <b>${fEur0(avg * 12)}</b></span>${(() => { const v = bs.reduce((s, b) => s + positionen(b).filter(p => p.variabel).reduce((t, p) => t + VORLAGEN.kosten.wert(p, heute()), 0), 0); return v ? `<span>davon variabel <b>${fEur0(v)}</b>/Monat</span>` : ''; })()}<span>Tippe auf einen Monat zum Anpassen</span></div>
+    <div class="figs"><span>nächste 12 Monate <b>${fEur0(avg * 12)}</b></span>${(() => { const teil = variabel => bs.reduce((s, b) => s + positionen(b).filter(p => !p.variabel === !variabel).reduce((t, p) => t + VORLAGEN.kosten.wert(p, heute()), 0), 0); const f = teil(false), v = teil(true);
+      return (f ? `<span>davon fix <b>${fEur0(f)}</b>/Monat</span>` : '') + (v ? `<span>davon variabel <b>${fEur0(v)}</b>/Monat</span>` : ''); })()}<span>Tippe auf einen Monat zum Anpassen</span></div>
     <div class="actions" style="margin:0"><a class="btn small" href="#/kosten/vergleich">Vergleich mit dem Vorjahr ›</a></div>
     ${balkenHtml(pl, true, farbe)}` : `
     <div class="lab">${B.name}</div>
