@@ -216,6 +216,16 @@ dialog::backdrop { background: rgb(10 15 20 / .45); }
 .pill { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 600; line-height: 18px; vertical-align: 1px; white-space: nowrap; }
 .check { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 14px; }
 .check input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.pill.grau { background: var(--line); color: var(--muted); }
+.check.pause { flex-direction: column; gap: 8px; }
+.check.pause > label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.check.pause .seit { display: flex; gap: 8px; align-items: center; padding-left: 28px; }
+.check.pause .seit[hidden] { display: none; }
+.check.pause .seit input { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; width: auto; height: auto; margin: 0; flex: 1; max-width: 220px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+label.chip { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+label.chip input { margin: 0; width: 16px; height: 16px; }
+label.chip:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .check:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .split { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: center; }
 @media (max-width: 520px) { .split { grid-template-columns: 1fr; justify-items: center; } .split .leg { width: 100%; } }
@@ -338,7 +348,9 @@ const tcgPreis = (p, d) => { let r = null; for (const [k, v] of tcgPreise(p)) if
 const tcgMenge = p => typeof p.menge === 'number' && p.menge > 0 ? p.menge : 1;
 const tcgEinsatz = p => (typeof p.einstand === 'number' ? p.einstand : tcgPreise(p)[0]?.[1] ?? 0) * tcgMenge(p);
 const tcgWeg = (p, d) => { const k = TCG_ABGANG[p.status]; if (!k) return false; const g = p[k]?.datum; if (g) return g <= d; const l = tcgPreis(p); return !l || d > l.d; };
-const personName = id => S.personen.find(p => p.id === id)?.name || '';
+// „Gehört“ kann eine Person (Text) oder mehrere (Liste) sein; leer = Familie / gemeinsam
+const persIds = v => Array.isArray(v) ? v : v ? [v] : [];
+const personName = v => persIds(v).map(id => S.personen.find(p => p.id === id)?.name).filter(Boolean).join(', ');
 const diff = (v, alt, fmt = fEur) => {
   if (alt == null) return '';
   const d = v - alt; if (Math.abs(d) < 0.005) return '<span class="muted">±0 zum Vormonat</span>';
@@ -363,7 +375,7 @@ const VORLAGEN = {
     felder: [
       { k: 'name', l: 'Bezeichnung', t: 'text', pflicht: true, ph: 'z. B. Vanguard FTSE All-World' },
       { k: 'anbieter', l: 'Anbieter / Bank', t: 'text' },
-      { k: 'person', l: 'Gehört', t: 'person' },
+      { k: 'person', l: 'Gehört (mehrere möglich, keine Auswahl = Familie / gemeinsam)', t: 'person' },
       { k: 'sparrate', l: 'Sparrate pro Monat (optional)', t: 'eur' },
       { k: 'werte', l: 'Stand', t: 'verlauf' },
       { k: 'notiz', l: 'Notiz', t: 'notiz' },
@@ -385,7 +397,7 @@ const VORLAGEN = {
       { k: 'name', l: 'Bezeichnung', t: 'text', pflicht: true, ph: 'z. B. Vanguard FTSE All-World, Wiener Philharmoniker 1 oz Gold' },
       { k: 'kennung', l: 'ISIN / Kennung (gleiche Kennung = gleicher Kurs)', t: 'text', halb: true },
       { k: 'anbieter', l: 'Depot / Händler', t: 'text', halb: true },
-      { k: 'person', l: 'Gehört', t: 'person' },
+      { k: 'person', l: 'Gehört (mehrere möglich, keine Auswahl = Familie / gemeinsam)', t: 'person' },
       { k: 'link', l: 'Link zum Kurs (z. B. justETF, philoro, Münze Österreich)', t: 'url' },
       { k: 'staende', l: 'Bestand und Kurs', t: 'kursstand' },
       { k: 'notiz', l: 'Notiz', t: 'notiz' },
@@ -412,7 +424,7 @@ const VORLAGEN = {
       { k: 'art', l: 'Art', t: 'auswahl', optionen: { objekt: 'Wert der Immobilie', kredit: 'Kredit' } },
       { k: 'name', l: 'Bezeichnung', t: 'text', pflicht: true, ph: 'z. B. Haus, Wohnkredit 1' },
       { k: 'anbieter', l: 'Bank / Quelle der Schätzung', t: 'text' },
-      { k: 'person', l: 'Gehört', t: 'person' },
+      { k: 'person', l: 'Gehört (mehrere möglich, keine Auswahl = Familie / gemeinsam)', t: 'person' },
       { k: 'zinssatz', l: 'Zinssatz % p.a.', t: 'eur', nur: 'kredit', halb: true },
       { k: 'rate', l: 'Monatliche Rate', t: 'eur', nur: 'kredit', halb: true },
       { k: 'werte', l: 'Wert (Schätzung) bzw. Restschuld laut Bank', t: 'verlauf' },
@@ -448,7 +460,7 @@ const VORLAGEN = {
     felder: [
       { k: 'name', l: 'Bezeichnung', t: 'text', pflicht: true, ph: 'z. B. Kreditrate, Lebensmittel, Weihnachten' },
       { k: 'anbieter', l: 'Anbieter', t: 'text' },
-      { k: 'person', l: 'Gehört', t: 'person' },
+      { k: 'person', l: 'Gehört (mehrere möglich, keine Auswahl = Familie / gemeinsam)', t: 'person' },
       { k: 'betrag', l: 'Betrag', t: 'eur', pflicht: true, halb: true },
       { k: 'intervall', l: 'Rhythmus', t: 'auswahl', optionen: Object.fromEntries(Object.entries(INTERVALLE).map(([k, v]) => [k, v[0]])), halb: true },
       { k: 'beginn', l: 'Fällig am (erste Zahlung, gern auch Jahre zurück)', t: 'datum', halb: true },
@@ -457,11 +469,14 @@ const VORLAGEN = {
       { k: 'frist', l: 'Nächster Kündigungs- oder Verlängerungstermin', t: 'datum' },
       { k: 'abweichungen', l: 'Abweichungen einzelner Monate', t: 'abw' },
       { k: 'notiz', l: 'Notiz', t: 'notiz' },
+      { k: 'pausiert', l: 'Stillgelegt / pausiert: ab diesem Datum fallen keine Zahlungen mehr an, der Posten bleibt aber erhalten', t: 'pause' },
     ],
     // Was in einem Monat (JJJJ-MM) tatsächlich fällig ist. Eine Abweichung für diesen Monat hat Vorrang.
     zahlung(p, ym, ohneAbw) {
       const ab = ohneAbw ? null : p.abweichungen?.[ym]; if (ab != null) return ab;
       const n = INTERVALLE[p.intervall || 'monat']?.[1] ?? 1;
+      // pausiert: Zahlungen ab dem Pausendatum entfallen (Fälligkeitstag aus „Fällig am“, sonst der Monatserste)
+      if (p.pausiert && `${ym}-${p.beginn ? p.beginn.slice(8, 10) : '01'}` >= p.pausiert) return 0;
       if (p.ende && ym > p.ende.slice(0, 7)) return 0;
       if (!p.beginn) return n === 0 ? 0 : (p.betrag || 0) / n; // ohne Fälligkeit gleichmäßig verteilt
       const k = ymDiff(p.beginn.slice(0, 7), ym); if (k < 0) return 0;
@@ -477,7 +492,7 @@ const VORLAGEN = {
       const vorbei = p.ende && p.ende.slice(0, 7) < ymHeute();
       const nx = this.naechste(p); const nAbw = Object.keys(p.abweichungen || {}).filter(k => k >= ymHeute()).length;
       const rhythmus = iv[1] === 0 ? `einmalig${p.beginn ? ' ' + fYm(p.beginn.slice(0, 7)) : ''}` : `${fEur(p.betrag)} ${iv[0]}`;
-      return { meta: [p.anbieter, personName(p.person), vorbei ? 'beendet' : iv[1] > 1 && nx ? 'nächste ' + fYm(nx.ym) : '', !p.beginn && iv[1] > 1 ? 'ohne Fälligkeit, verteilt' : '', nAbw ? `${nAbw} Monat${nAbw > 1 ? 'e' : ''} angepasst` : ''].filter(Boolean).join(' · '),
+      return { meta: [p.anbieter, personName(p.person), p.pausiert ? '' : vorbei ? 'beendet' : iv[1] > 1 && nx ? 'nächste ' + fYm(nx.ym) : '', !p.beginn && iv[1] > 1 ? 'ohne Fälligkeit, verteilt' : '', nAbw ? `${nAbw} Monat${nAbw > 1 ? 'e' : ''} angepasst` : ''].filter(Boolean).join(' · '),
                sub: rhythmus };
     },
     hinweise(p) { if (!p.frist || (p.ende && p.ende <= heute())) return []; const t = tageBis(p.frist); return t >= 0 && t <= 45 ? [`Kündigungs-/Verlängerungstermin in ${t} Tagen (${fDatum(p.frist)})`] : []; },
@@ -488,13 +503,14 @@ const VORLAGEN = {
 // Stephans Kostenbausteine mit Farben (13.10.2026)
 // Kennzeichen für Posten mit schwankendem Betrag (Schätzwert)
 const VARIABEL = ' <span class="pill" title="Betrag schwankt, Schätzwert">variabel</span>';
+const PAUSIERT = p => ` <span class="pill grau" title="Keine Zahlungen ab diesem Datum">pausiert seit ${fDatum(p.pausiert)}</span>`;
 const STARTKOSTEN = [['Wohnen', 'dunkelgruen'], ['Haushalt', 'gruen'], ['Gesundheit', 'hellgruen'], ['Investment & Finanzen', 'braungruen'], ['Auto', 'orange'], ['Freizeit', 'magenta']];
 const STARTVERMOEGEN = [['stand', 'Sparkonto'], ['kurs', 'ETF-/Wertpapierdepot'], ['stand', 'Altersvorsorge'], ['kurs', 'Edelmetalle'], ['stand', 'Investitionen am/im Haus'], ['immobilie', 'Eigentumshaus']];
 
 /* ───────────── Berechnung: alles hängt an „Wert einer Position am Stichtag“ ───────────── */
 let personFilter = pref.get('person', '');
 let zeitraum = pref.get('zeitraum', '12');
-const positionen = b => Object.entries(b.positionen || {}).map(([id, p]) => ({ id, ...p })).filter(p => !personFilter || p.person === personFilter);
+const positionen = b => Object.entries(b.positionen || {}).map(([id, p]) => ({ id, ...p })).filter(p => !personFilter || persIds(p.person).includes(personFilter));
 // Das Sammelkarten-Depot erscheint als Baustein, sobald es Positionen hat (eigener Speicher unter tcg/)
 let TCG = null, TCGB = null;
 const TCG_ID = 'sammelkarten';
@@ -871,7 +887,7 @@ function viewBaustein(id) {
   const ps = positionen(b); const w = bausteinWert(b);
   const zeilen = ps.map(p => ({ p, w: V.wert(p, heute()) })).sort((a, c) => c.w - a.w || a.p.name.localeCompare(c.p.name)).map(({ p, w: pw }) => {
     const z = V.zeile(p);
-    return `<button class="row" data-act="pos" data-id="${p.id}"><span class="name">${esc(p.name)}${p.variabel ? VARIABEL : ''}</span><span class="val ${z.valKl || ''}">${fEur(pw)}${m ? '<span class="muted"> Ø/M</span>' : ''}</span>
+    return `<button class="row" data-act="pos" data-id="${p.id}"><span class="name">${esc(p.name)}${p.variabel ? VARIABEL : ''}${p.pausiert ? PAUSIERT(p) : ''}</span><span class="val ${z.valKl || ''}">${fEur(pw)}${m ? '<span class="muted"> Ø/M</span>' : ''}</span>
       <span class="meta">${esc(z.meta)}</span><span class="sub ${z.subKl || ''}">${esc(z.sub)}</span></button>`;
   }).join('');
   return filterzeile(!m) + `
@@ -979,7 +995,9 @@ function feldHtml(f, p) {
     case 'haken': return `<label class="check"><input type="checkbox" name="${f.k}" ${v ? 'checked' : ''}><span>${f.l}</span></label>`;
     case 'notiz': return wrap(`<textarea name="${f.k}">${esc(v)}</textarea>`);
     case 'auswahl': return wrap(`<select name="${f.k}">${Object.entries(f.optionen).map(([k, l]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`);
-    case 'person': return S.personen.length ? wrap(`<select name="${f.k}"><option value="">Familie / gemeinsam</option>${S.personen.map(x => `<option value="${x.id}" ${v === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`) : '';
+    case 'person': return S.personen.length ? `<div class="field"><span>${f.l}</span><div class="chips">${S.personen.map(x => `<label class="chip"><input type="checkbox" name="${f.k}" value="${x.id}" ${persIds(v).includes(x.id) ? 'checked' : ''}>${esc(x.name)}</label>`).join('')}</div></div>` : '';
+    case 'pause': return `<div class="check pause"><label><input type="checkbox" data-pause ${v ? 'checked' : ''}><span>${f.l}</span></label>
+      <label class="seit" ${v ? '' : 'hidden'}><small>seit</small><input type="date" name="${f.k}" value="${esc(v || heute())}" ${v ? '' : 'disabled'}></label></div>`;
     case 'abw': return Object.keys(v || {}).length ? `<div class="field"><span>${f.l}</span><div class="hist" data-abwlist></div><small class="muted">Ändern über die Monatsplanung unter Laufende Kosten.</small></div>` : '';
     case 'verlauf': return `<div class="field"><span>${f.l}</span><div class="hist" data-verlauf>
       <div class="hist-add"><input type="date" data-h="d" value="${heute()}" aria-label="Datum"><input inputmode="decimal" data-h="v" placeholder="Betrag €" aria-label="Betrag" autocomplete="off"><button type="button" class="btn small" data-act="histAdd">Eintragen</button></div>
@@ -1020,6 +1038,8 @@ function oeffnePosition(bid, pid) {
   const zeigArt = () => form.querySelectorAll('[data-nur]').forEach(el => { el.hidden = !art || art.value !== el.dataset.nur; });
   if (art) { art.onchange = zeigArt; } zeigArt();
   form.querySelectorAll('.two').forEach(t => { t.hidden = [...t.children].every(c => c.hidden); });
+  const pz = form.querySelector('[data-pause]');
+  if (pz) pz.onchange = () => { const s = form.querySelector('.pause .seit'); s.hidden = !pz.checked; s.querySelector('input').disabled = !pz.checked; };
   if (art) art.addEventListener('change', () => form.querySelectorAll('.two').forEach(t => { t.hidden = [...t.children].every(c => c.hidden); }));
   // offene Eingabe im Stand-Feld wird beim Speichern mitgenommen
   const nimmHist = () => { const d = form.querySelector('[data-h=d]'), v = form.querySelector('[data-h=v]'); if (d && v && zahl(v.value) != null && d.value) { werte[d.value] = zahl(v.value); v.value = ''; zeigWerte(); } };
@@ -1041,6 +1061,7 @@ function oeffnePosition(bid, pid) {
       if (f.t === 'abw') { if (Object.keys(abw).length) neu[f.k] = abw; continue; }
       if (f.t === 'kursstand') { neu[f.k] = staende; continue; }
       if (f.nur && fd.get('art') !== f.nur) continue;
+      if (f.t === 'person') { const ids = fd.getAll(f.k); if (ids.length) neu[f.k] = ids.length > 1 ? ids : ids[0]; continue; }
       const raw = fd.get(f.k); if (raw == null) continue;
       const val = f.t === 'eur' ? zahl(raw) : f.t === 'haken' ? true : String(raw).trim();
       if (val !== '' && val != null) neu[f.k] = val;
@@ -1085,7 +1106,7 @@ function oeffneMonat(ym) {
   for (const b of bs) for (const p of positionen(b)) if ((p.intervall || 'monat') !== 'einmalig' && !posten.some(x => x.p.id === p.id)) posten.push({ b, p, z: 0 });
   posten.slice(fallig).sort((a, c) => a.b.name.localeCompare(c.b.name) || a.p.name.localeCompare(c.p.name)).forEach((x, k) => { posten[fallig + k] = x; });
   const zeile = (x, i) => { const reg = VORLAGEN.kosten.zahlung(x.p, ym, true); const anders = x.p.abweichungen?.[ym] != null;
-    return `<div class="mon-row"><span class="t">${esc(x.p.name)}${x.p.variabel ? VARIABEL : ''}<small>${esc(x.b.name)}${anders ? ' · regulär ' + fEur(reg) : ''}</small></span>
+    return `<div class="mon-row"><span class="t">${esc(x.p.name)}${x.p.variabel ? VARIABEL : ''}${x.p.pausiert ? PAUSIERT(x.p) : ''}<small>${esc(x.b.name)}${anders ? ' · regulär ' + fEur(reg) : ''}</small></span>
       <input inputmode="decimal" data-i="${i}" value="${x.z || anders ? fEin(x.z) : ''}" placeholder="0" class="${anders ? 'anders' : ''}" aria-label="Betrag ${esc(x.p.name)}" autocomplete="off">
       ${anders ? `<button type="button" class="x" data-act="reset" data-i="${i}" title="auf regulär zurücksetzen" aria-label="zurücksetzen">↺</button>` : '<span></span>'}</div>`; };
   $dlg.innerHTML = `<form class="sheet" method="dialog"><h2 tabindex="-1" autofocus>${fYm(ym, true)}</h2>
@@ -1286,7 +1307,7 @@ document.addEventListener('click', e => {
   if (a === 'tabelle') tabelleEinspielen(document.querySelector('[data-imp]').value);
   if (a === 'startKosten') aendern(() => { const da = bausteineVon('kosten').map(b => b.name.trim().toLowerCase()); STARTKOSTEN.filter(([n]) => !da.includes(n.toLowerCase())).forEach(([name, farbe], i) => { const id = uid(); S.bausteine[id] = { id, vorlage: 'kosten', name, farbe, notiz: '', positionen: {}, reihe: Object.keys(S.bausteine).length + i }; }); });
   if (a === 'startVermoegen') aendern(() => { STARTVERMOEGEN.forEach(([vorlage, name], i) => { const id = uid(); S.bausteine[id] = { id, vorlage, name, notiz: '', positionen: {}, reihe: Object.keys(S.bausteine).length + i }; }); });
-  if (a === 'personWeg' && confirm('Person entfernen? Ihre Positionen bleiben erhalten und zählen dann zu „Familie“.')) aendern(() => { S.personen = S.personen.filter(p => p.id !== el.dataset.id); for (const b of Object.values(S.bausteine)) for (const p of Object.values(b.positionen || {})) if (p.person === el.dataset.id) delete p.person; if (personFilter === el.dataset.id) personFilter = ''; });
+  if (a === 'personWeg' && confirm('Person entfernen? Ihre Positionen bleiben erhalten und zählen dann zu „Familie“.')) aendern(() => { S.personen = S.personen.filter(p => p.id !== el.dataset.id); for (const b of Object.values(S.bausteine)) for (const p of Object.values(b.positionen || {})) { const r = persIds(p.person).filter(x => x !== el.dataset.id); if (!r.length) delete p.person; else p.person = r.length > 1 ? r : r[0]; } if (personFilter === el.dataset.id) personFilter = ''; });
   if (a === 'export') exportieren();
   if (a === 'demo' && confirm('Beispieldaten laden? Die Daten auf diesem Gerät werden ersetzt.')) { aendern(() => { S = beispiel(); }); location.hash = '#/'; }
   if (a === 'allesWeg' && confirm('Wirklich alle Daten des Dashboards auf diesem Gerät löschen? Das Sammelkarten-Depot bleibt erhalten. Vorher am besten ein Backup exportieren.')) aendern(() => { S = leer(); personFilter = ''; });

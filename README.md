@@ -20,7 +20,7 @@ Vorhandene Vorlagen:
 | Kurs × Stück | Vermögen | ETFs, Aktien, Münzen: Stückzahl, Einstand und Kurs, Link zur Kursseite, „Kurse aktualisieren“ für alle Positionen auf einmal (gleiche Kennung = gleicher Kurs) |
 | Immobilie & Kredite | Vermögen | Wert der Immobilie minus Restschuld der Kredite; die Restschuld wird aus Zinssatz und Rate Monat für Monat weitergerechnet |
 | Sammelkarten-Depot | Vermögen | erscheint automatisch als Baustein „Sammelkarten“, sobald das Depot unter tcg/ Positionen hat; Wert, Einsatz und Verlauf werden aus dessen Daten gelesen, gepflegt wird dort |
-| Kostenliste | Laufende Kosten | Kredite, Versicherungen, Abos, Lebensmittel, Feste … mit Betrag, Kennzeichen „variabel“ für schwankende Beträge, Rhythmus (monatlich, alle 2 oder 3 Monate, halbjährlich, jährlich oder einmalig), Fälligkeit, Ende, Kündigungstermin |
+| Kostenliste | Laufende Kosten | Kredite, Versicherungen, Abos, Lebensmittel, Feste … mit Betrag, Kennzeichen „variabel“ für schwankende Beträge, Rhythmus (monatlich, alle 2 oder 3 Monate, halbjährlich, jährlich oder einmalig), Fälligkeit, Ende, Kündigungstermin, „pausiert seit“ (stillgelegt ab einem Datum, bleibt erhalten) |
 
 **Monatsplanung (Laufende Kosten):** Die App rechnet für die nächsten 12 Monate aus, was in jedem Monat tatsächlich fällig ist, z. B. die Jahresrate im Dezember. Teure Monate sind orange markiert und erscheinen als Hinweis auf dem Dashboard. Tippen auf einen Monat zeigt jede Zahlung; Beträge lassen sich nur für diesen Monat ändern (z. B. Lebensmittel im Dezember 900 statt 650 €), und einmalige Ausgaben lassen sich ergänzen. Die Kennzahl „Ø/Monat“ ist der Schnitt dieser 12 Monate.
 
@@ -32,7 +32,7 @@ Bei leeren Laufenden Kosten legt „Unsere Kostenbausteine anlegen“ Wohnen (du
 
 Bei leerem Vermögen legt „Unsere Bausteine anlegen“ Sparkonto, ETF-/Wertpapierdepot, Altersvorsorge, Edelmetalle, Investitionen am/im Haus und Eigentumshaus an.
 
-Weitere Funktionen: Familienmitglieder (voreingestellt: Stephan, Vicky, Kids) mit Filter „wem gehört's“, Posten zwischen Bausteinen verschieben, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON inklusive Sammelkarten-Depot (Export/Import; alte Depot-Backups werden ebenfalls angenommen), Beispieldaten zum Ausprobieren.
+Weitere Funktionen: Familienmitglieder (voreingestellt: Stephan, Vicky, Kids) mit Filter „wem gehört's“ (ein Posten kann mehreren gehören), Posten zwischen Bausteinen verschieben, Zeitraum 1 J / 3 J / Max, Gesamt-Backup als JSON inklusive Sammelkarten-Depot (Export/Import; alte Depot-Backups werden ebenfalls angenommen), Beispieldaten zum Ausprobieren.
 
 ## Dateien
 
