@@ -6,7 +6,7 @@ Eine eigenständige Web-App (PWA) für iPhone und PC. Alle Daten liegen nur auf 
 
 ## Aufbau in drei Ebenen
 
-1. **Dashboard:** zwei Verläufe, **Vermögen** (Summe aller Vermögensbausteine) und **Laufende Kosten** (Summe pro Monat). Darunter Hinweise, z. B. bald fällige Kündigungstermine.
+1. **Dashboard:** zwei Verläufe, **Vermögen** (Summe aller Vermögensbausteine) und **Laufende Kosten** (Summe pro Monat). Optional **Laufende Einnahmen** mit „Bleibt übrig“ (Einnahmen minus Kosten pro Monat): standardmäßig ausgeblendet, das Auge „Einnahmen“ in der Filterzeile blendet sie bis zum nächsten App-Start ein. Darunter Hinweise, z. B. bald fällige Kündigungstermine.
 2. **Bereich:** alle Bausteine eines Bereichs mit Wert, Anteil und gemeinsamem Verlauf, z. B. ETF-Depot, Konten, Altersvorsorge oder Versicherungen, Abos, Handy.
 3. **Baustein:** die einzelnen Positionen, z. B. jede ETF-Position oder jede Versicherung.
 
@@ -21,6 +21,7 @@ Vorhandene Vorlagen:
 | Immobilie & Kredite | Vermögen | Wert der Immobilie minus Restschuld der Kredite; die Restschuld wird aus Zinssatz und Rate Monat für Monat weitergerechnet |
 | Sammelkarten-Depot | Vermögen | erscheint automatisch als Baustein „Sammelkarten“, sobald das Depot unter tcg/ Positionen hat; Wert, Einsatz und Verlauf werden aus dessen Daten gelesen, gepflegt wird dort |
 | Kostenliste | Laufende Kosten | Kredite, Versicherungen, Abos, Lebensmittel, Feste … mit Betrag, Kennzeichen „variabel“ für schwankende Beträge, Rhythmus (monatlich, alle 2 oder 3 Monate, halbjährlich, jährlich oder einmalig), Fälligkeit, Ende, Kündigungstermin, „pausiert seit“ (stillgelegt ab einem Datum, bleibt erhalten) |
+| Einnahmenliste | Laufende Einnahmen | Gehälter, Urlaubs- und Weihnachtsgeld, Familienbeihilfe … gleiche Felder wie die Kostenliste (ohne Kündigungstermin), inklusive Monatsplanung |
 
 **Monatsplanung (Laufende Kosten):** Die App rechnet für die nächsten 12 Monate aus, was in jedem Monat tatsächlich fällig ist, z. B. die Jahresrate im Dezember. Teure Monate sind orange markiert und erscheinen als Hinweis auf dem Dashboard. Tippen auf einen Monat zeigt jede Zahlung; Beträge lassen sich nur für diesen Monat ändern (z. B. Lebensmittel im Dezember 900 statt 650 €), und einmalige Ausgaben lassen sich ergänzen. Die Kennzahl „Ø/Monat“ ist der Schnitt dieser 12 Monate.
 
